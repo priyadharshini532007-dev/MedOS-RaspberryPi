@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>MedOS · Smart Hospital Scheduler</title>
+  <meta name="description" content="Emergency priority scheduling, voice check-in, token and ambulance booking with the fastest hospital recommended on the map.">
+  <meta name="theme-color" content="#0e7490">
+  <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="css/site.css">
+  <script>try { const t = localStorage.getItem("medos.theme"); if (t) document.documentElement.dataset.theme = t; } catch {}</script>
+</head>
+<body>
+  <a class="skip-link" href="#content">Skip to content</a>
+  <div class="app" id="app">
+    <aside class="sidebar" id="sidebar" aria-label="Main navigation">
+      <a class="brand" href="#/">
+        <span class="brand-mark" data-icon="pulse"></span>
+        <span><b>MedOS</b><small id="hosp-name">City General Hospital</small></span>
+      </a>
+      <div class="nav-group">For patients</div>
+      <a class="nav-link" href="#/" data-icon="home" data-route="home">Home</a>
+      <a class="nav-link" href="#/patient" data-icon="user" data-route="patient">Patient dashboard</a>
+      <a class="nav-link" href="#/patient/ambulance" data-icon="ambulance" data-route="patient-ambulance">Book an ambulance</a>
+      <a class="nav-link" href="#/patient/bookings" data-icon="ticket" data-route="patient-bookings">My bookings</a>
+      <div class="nav-group">Hospital staff</div>
+      <a class="nav-link" href="#/reception" data-icon="desk" data-route="reception" data-staff>Reception</a>
+      <a class="nav-link" href="#/voice" data-icon="mic" data-route="voice" data-staff>Voice intake</a>
+      <a class="nav-link" href="#/doctor" data-icon="stetho" data-route="doctor" data-staff>Doctor</a>
+      <a class="nav-link" href="#/pharmacy" data-icon="pill" data-route="pharmacy" data-staff>Pharmacy</a>
+      <a class="nav-link" href="#/ambulance" data-icon="siren" data-route="ambulance" data-staff>Ambulance desk</a>
+      <a class="nav-link" href="#/admin" data-icon="shield" data-route="admin" data-staff>Admin</a>
+      <a class="nav-link" href="#/display" data-icon="tv" data-route="display">Waiting-room display</a>
+      <div class="nav-group">Learn</div>
+      <a class="nav-link" href="#/lab" data-icon="lab" data-route="lab">Scheduler Lab</a>
+      <a class="nav-link" href="#/about" data-icon="info" data-route="about">How it works</a>
+      <div class="side-foot">
+        <svg class="ecg" viewBox="0 0 220 26" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M0 14h70l6-10 8 20 8-16 5 6h123"/></svg>
+        <div class="row">
+          <button class="btn sm ghost" id="theme-btn" type="button"><span data-icon="moon"></span>Theme</button>
+        </div>
+      </div>
+    </aside>
+    <div class="scrim" id="scrim"></div>
+    <div class="main">
+      <header class="topbar">
+        <button class="icon-btn" id="menu-btn" type="button" aria-label="Open menu" aria-controls="sidebar" aria-expanded="false" data-icon="menu"></button>
+        <span class="title" id="top-title">MedOS</span>
+        <button class="icon-btn" id="theme-btn-m" type="button" aria-label="Switch theme" data-icon="moon"></button>
+      </header>
+      <div class="alarm-bar" id="alarm-bar" role="alert">
+        <span data-icon="siren"></span><span id="alarm-text">Emergency</span>
+        <button class="btn sm" id="alarm-ack" type="button">Acknowledge</button>
+      </div>
+      <main id="content" tabindex="-1"></main>
+    </div>
+    <nav class="tabbar" aria-label="Quick navigation">
+      <a href="#/" data-route="home" data-icon="home">Home</a>
+      <a href="#/patient" data-route="patient" data-icon="calendar">Book</a>
+      <a href="#/patient/ambulance" data-route="patient-ambulance" data-icon="ambulance" class="sos">SOS</a>
+      <a href="#/reception" data-route="reception" data-icon="desk">Reception</a>
+      <button type="button" id="more-btn" data-icon="menu">More</button>
+    </nav>
+  </div>
+  <div id="toasts" aria-live="polite"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/util.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/triage.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/voice.js"></script>
+  <script src="js/maps.js"></script>
+  <script src="js/pages-patient.js"></script>
+  <script src="js/pages-staff.js"></script>
+  <script src="js/pages-learn.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
