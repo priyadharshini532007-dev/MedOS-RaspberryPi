@@ -191,6 +191,23 @@ let mode = null, session = null;
   } else seg.remove();
 })();
 
+// Spoken language for the browser microphone: English or Tamil (Tamil script, English words mixed in).
+// A choice made here is remembered on this device; otherwise Admin → Settings → Language for speech applies.
+const voiceLang = () => { try { return localStorage.getItem("medos.voice.lang"); } catch { return null; } };
+function showVoiceLang() {
+  const cur = voiceLang() || store.state?.settings?.voice_lang || "en-IN";
+  $$("#voice-lang button").forEach((b) => b.setAttribute("aria-pressed", String(cur.startsWith(b.dataset.lang.slice(0, 2)))));
+}
+$("#voice-lang").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b || session) return;
+  try { localStorage.setItem("medos.voice.lang", b.dataset.lang); } catch { /* private mode */ }
+  showVoiceLang();
+  $("#voice-help").textContent = b.dataset.lang === "ta-IN"
+    ? "தமிழில் பேசலாம் — பெயர், வயது, என்ன பிரச்சனை. English words are fine too. The Pi microphone understands English only."
+    : "Say the patient's name, age and what's wrong. Check the form before registering.";
+});
+showVoiceLang();
+
 // Recording runs until Stop is pressed; Pause / Resume holds it in between.
 let voicePaused = false, heardText = "";
 function setPauseBtn() {
@@ -214,7 +231,7 @@ $("#voice-btn").addEventListener("click", async () => {
   tr.innerHTML = `<span class="rec-dot" aria-hidden="true"></span><span class="muted">Recording. Take your time — press Stop when you're done.</span>`;
   btn.classList.add("recording"); btn.lastChild.textContent = "Stop and fill in";
   voicePaused = false; heardText = "";
-  session = listen({ mode, lang: store.state?.settings?.voice_lang || "en-IN", onPartial: (t) => {
+  session = listen({ mode, lang: voiceLang() || store.state?.settings?.voice_lang || "en-IN", onPartial: (t) => {
     if (voicePaused) return;
     heardText = t;
     tr.innerHTML = `<span class="rec-dot" aria-hidden="true"></span><span>${esc(t)}</span>`;

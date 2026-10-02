@@ -125,7 +125,9 @@ No laptop? `curl -fsSL https://ollama.com/install.sh | sh` on the Pi, then `olla
 | USB mic on the Pi | *Reception → Speak to register* with **Pi microphone** selected, or the Kiosk | Installed by `install.sh` (offline Vosk) |
 | The laptop or phone you're using | *Speak to register* with **This device** selected | Open MedOS over HTTPS: `https://medos.local:8443` (accept the certificate once). Browsers only allow microphones on secure pages. |
 
-While you speak, the words appear live. When you stop, Qwen (or the built-in parser if Qwen is offline) fills in name, age, sex, phone and symptoms for the receptionist to confirm.
+While you speak, the words appear live. Recording continues until you press **Stop**, and you can pause and resume. Then Qwen (or the built-in parser if Qwen is offline) fills in name, age, sex, phone and symptoms for the receptionist to confirm.
+
+**Tamil.** Press **தமிழ்** next to the voice button to speak Tamil; English words mixed in are fine. The browser writes Tamil in Tamil script, and the triage rules understand Tamil and Tanglish symptoms (`medos/triage_tamil.py`: நெஞ்சு வலி, மூச்சு திணறல், பாம்பு கடி, காய்ச்சல், "nenju vali"…), including Tamil negation ("நெஞ்சு வலி இல்லை" = no chest pain). The parser picks up "என் பெயர் கவிதா, 34 வயசு". Tamil needs the browser microphone ("This mic, browser"); the offline Pi microphone models are English-only. The machine-learning model is English-only too, so for Tamil it stays silent and the rules decide.
 
 ---
 

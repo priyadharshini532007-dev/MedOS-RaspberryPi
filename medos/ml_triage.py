@@ -82,6 +82,10 @@ def predict(symptoms: str, age: Any = None, vitals: Optional[Dict[str, Any]] = N
     if m is None or not (symptoms or "").strip():
         return None
     x = _features(m, symptoms, age, vitals or {}, pregnant)
+    # The model was trained on English. If it recognises none of the words (e.g. a Tamil sentence) it
+    # gives no opinion, rather than guessing from vital signs alone; the rules (which know Tamil) decide.
+    if not any(i < len(m["tfidf"]["idf"]) for i in x):
+        return None
     logits = [b + sum(w[i] * v for i, v in x.items()) for w, b in zip(m["coef"], m["intercept"])]
     top = max(logits)
     exps = [math.exp(z - top) for z in logits]

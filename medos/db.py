@@ -353,6 +353,21 @@ def seed_conditions() -> None:
             })
 
 
+def add_tamil_keywords() -> None:
+    """Protocols saved before Tamil support: append the Tamil words to each matching condition.
+
+    Only missing keywords are added, so edits made in Admin → Triage protocol are kept."""
+    from .triage_tamil import TAMIL_KEYWORDS
+    for row in rows("SELECT id, name, keywords FROM conditions"):
+        extra = TAMIL_KEYWORDS.get(row["name"])
+        if not extra:
+            continue
+        have = [k.strip() for k in (row["keywords"] or "").split(",") if k.strip()]
+        missing = [k for k in extra if k not in have]
+        if missing:
+            update("conditions", row["id"], {"keywords": ", ".join(have + missing)})
+
+
 def init() -> None:
     c = conn()
     c.executescript(SCHEMA)
@@ -366,6 +381,8 @@ def init() -> None:
     _settings_cache.clear()
     if scalar("SELECT COUNT(*) FROM conditions") == 0:
         seed_conditions()
+    else:
+        add_tamil_keywords()
     if scalar("SELECT COUNT(*) FROM rooms") == 0:
         t = now()
         for name, kind in (("ER Bay 1", "emergency"), ("Room 1", "consultation"),

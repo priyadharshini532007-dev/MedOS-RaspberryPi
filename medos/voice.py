@@ -303,6 +303,16 @@ NAME_STOP = {"having", "suffering", "feeling", "not", "very", "a", "an", "the", 
              "pregnant", "male", "female", "okay", "fine", "going", "also", "age", "aged"}
 
 
+# Tamil and Tanglish check-in phrases. The recogniser writes numbers as digits ("34 வயசு").
+TAMIL_NAME = r"(?:என்(?:னுடைய)?\s+(?:பெயர்|பேர்|பேரு)|பெயர்|\ben\s+(?:peru|per|peyar))\s*[:,]?\s*([^\s,.\d]+)"
+TAMIL_AGE = r"(\d{1,3})\s*(?:வயது|வயசு|வயதாகிறது|வயசாகுது|வயதான|vayasu|vayathu|vayadhu)"
+TAMIL_AGE_BEFORE = r"(?:வயது|வயசு|vayasu|vayathu)\s*[:,]?\s*(\d{1,3})"
+TAMIL_AGE_STRIP = r"(?:\d{1,3}\s*(?:வயது|வயசு|வயதாகிறது|வயசாகுது|vayasu|vayathu|vayadhu)\S*|(?:வயது|வயசு)\s*\d{1,3})\s*,?"
+TAMIL_FEMALE = r"பெண்|அம்மா|மனைவி|மகள்|அக்கா|தங்கை|பாட்டி|அவள்|கர்ப்ப"
+TAMIL_MALE = r"ஆண்|அப்பா|கணவர்|கணவன்|மகன்|அண்ணன்|அண்ணா|தம்பி|தாத்தா|அவன்"
+TAMIL_PREGNANT = r"கர்ப்ப|garbam|karbam"
+
+
 def parse_checkin(text: str) -> Dict[str, Any]:
     """Best-effort field extraction without a model."""
     raw = words_to_digits(text or "")
@@ -324,16 +334,26 @@ def parse_checkin(text: str) -> Dict[str, Any]:
             out["name"] = " ".join(w.capitalize() for w in kept)
             name_span = (m.start(), end)
 
+    # Tamil / Tanglish: "என் பெயர் கவிதா", "என் பேரு ரவி", "en peru Kavitha"
+    tamil_name_span = None
+    if not out["name"]:
+        m = re.search(TAMIL_NAME, raw, re.I)
+        if m:
+            out["name"] = m.group(1).strip(" .,")
+            out["name"] = out["name"][0].upper() + out["name"][1:]
+            tamil_name_span = (m.start(), m.end())
+
     m = re.search(r"\b(\d{1,3})\s*(?:years?|yrs?|yr)(?:\s*old)?\b", low) or \
-        re.search(r"\b(?:age|aged)\s*(?:is\s*)?(\d{1,3})\b", low)
+        re.search(r"\b(?:age|aged)\s*(?:is\s*)?(\d{1,3})\b", low) or \
+        re.search(TAMIL_AGE, low) or re.search(TAMIL_AGE_BEFORE, low)
     if m and 0 < int(m.group(1)) < 120:
         out["age"] = int(m.group(1))
 
-    if re.search(r"\b(female|woman|lady|girl|she|her|mother|wife|daughter|pregnant)\b", low):
+    if re.search(r"\b(female|woman|lady|girl|she|her|mother|wife|daughter|pregnant)\b", low) or re.search(TAMIL_FEMALE, low):
         out["sex"] = "female"
-    elif re.search(r"\b(male|man|boy|he|his|father|husband|son)\b", low):
+    elif re.search(r"\b(male|man|boy|he|his|father|husband|son)\b", low) or re.search(TAMIL_MALE, low):
         out["sex"] = "male"
-    if re.search(r"\bpregnan", low):
+    if re.search(r"\bpregnan", low) or re.search(TAMIL_PREGNANT, low):
         out["pregnant"] = True
 
     m = re.search(r"(\+?\d[\d\s-]{8,14}\d)", raw)
@@ -346,7 +366,11 @@ def parse_checkin(text: str) -> Dict[str, Any]:
     sym = raw
     if name_span:   # raw and low have the same length, so the span cuts the same words
         sym = sym[:name_span[0]] + " " + sym[name_span[1]:]
+    elif tamil_name_span:
+        sym = sym[:tamil_name_span[0]] + " " + sym[tamil_name_span[1]:]
     sym = re.sub(r"(?i)\b(?:i am|i'm)\s+\d{1,3}\s*(?:years?|yrs?)(?:\s*old)?", "", sym)
+    sym = re.sub(r"(?i)(?:^|(?<=[\s,]))(?:aged\s+)?\d{1,3}\s*(?:years?|yrs?)(?:\s*old)?\s*,?", "", sym)
+    sym = re.sub(TAMIL_AGE_STRIP, "", sym)
     sym = re.sub(r"(?i)\b(?:my )?(?:phone|mobile|number)\s*(?:number)?\s*(?:is)?\s*\+?[\d\s-]{8,16}", "", sym)
     sym = re.sub(r"\s{2,}", " ", sym).strip(" ,.")
     if sym:

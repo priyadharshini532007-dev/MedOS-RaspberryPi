@@ -59,29 +59,37 @@ const DEFAULT_CONDITIONS = [
     keywords: ["check-up", "checkup", "check up", "routine", "follow-up", "follow up", "review visit", "prescription", "bp check", "sugar check", "blood pressure check", "medical certificate", "vaccination"] },
 ];
 
+// Tamil and Tanglish words for every condition (js/triage_tamil.js, generated from medos/triage_tamil.py).
+if (typeof TAMIL_KEYWORDS !== "undefined") {
+  DEFAULT_CONDITIONS.forEach((c) => (TAMIL_KEYWORDS[c.name] || []).forEach((k) => { if (!c.keywords.includes(k)) c.keywords.push(k); }));
+}
 const NEGATION = /\b(no|not|without|denies|deny|denied|never|nil|free of|absence of)\b/;
+// A keyword must start a word: not preceded by a Latin letter, digit or Tamil character.
+const WORD_START = "(?<![a-z0-9\\u0B80-\\u0BFF])";
 const TEMP_RE = /(?:fever|temperature|temp)\D{0,20}?(\d{2,3}(?:\.\d)?)\s*(?:°|degrees?|deg)?\s*(f|c|fahrenheit|celsius)?|(\d{2,3}(?:\.\d)?)\s*(?:°|degrees?|deg)\s*(f|c|fahrenheit|celsius)?/gi;
 const reEsc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 function normalise(text) {
   return (text || "").toLowerCase().replace(/[’‘]/g, "'").replace(/[ \t]+/g, " ");
 }
-function _negated(text, start) {
+function _negated(text, start, end = null) {
   let w = text.slice(Math.max(0, start - 40), start);
   w = w.split(/[,.;!?\n]| but | however /).pop();
-  return NEGATION.test(w);
+  if (NEGATION.test(w)) return true;
+  // Tamil negates after the word: "நெஞ்சு வலி இல்லை" (no chest pain)
+  return end != null && typeof TAMIL_NEGATION !== "undefined" && TAMIL_NEGATION.test(text.slice(end, end + 24));
 }
 // First non-negated whole-word match of a phrase, as {index, len}. A trailing '*' makes it a prefix.
 function _findPhrase(text, phrase, offset = 0) {
   phrase = phrase.trim();
   if (!phrase) return null;
   const pat = phrase.endsWith("*")
-    ? "(?<![a-z0-9])" + reEsc(phrase.slice(0, -1)) + "[a-z]*"
-    : "(?<![a-z0-9])" + reEsc(phrase) + "(?:s|es|d|ed|ing)?(?![a-z0-9])";
+    ? WORD_START + reEsc(phrase.slice(0, -1)) + "[a-z\\u0B80-\\u0BFF]*"   // prefix: highlight the whole word
+    : WORD_START + reEsc(phrase) + "(?:s|es|d|ed|ing)?(?![a-z0-9])";
   const re = new RegExp(pat, "g");
   let m;
   while ((m = re.exec(text))) {
-    if (!_negated(text, m.index)) return { index: m.index + offset, len: m[0].length };
+    if (!_negated(text, m.index, m.index + m[0].length)) return { index: m.index + offset, len: m[0].length };
     if (!m[0].length) re.lastIndex++;
   }
   return null;
@@ -233,6 +241,15 @@ function wordsToDigits(text) {
 
 const NAME_STOP = new Set(["having", "suffering", "feeling", "not", "very", "a", "an", "the", "sick", "in", "here", "with", "experiencing", "getting", "unable", "so", "really", "from", "coming", "bleeding", "pregnant", "male", "female", "okay", "fine", "going", "also", "age", "aged", "and", "i", "my", "years", "year"]);
 
+// Tamil and Tanglish check-in phrases (same as medos/voice.py). The recogniser writes numbers as digits.
+const TAMIL_NAME = /(?:என்(?:னுடைய)?\s+(?:பெயர்|பேர்|பேரு)|பெயர்|\ben\s+(?:peru|per|peyar))\s*[:,]?\s*([^\s,.\d]+)/i;
+const TAMIL_AGE = /(\d{1,3})\s*(?:வயது|வயசு|வயதாகிறது|வயசாகுது|வயதான|vayasu|vayathu|vayadhu)/;
+const TAMIL_AGE_BEFORE = /(?:வயது|வயசு|vayasu|vayathu)\s*[:,]?\s*(\d{1,3})/;
+const TAMIL_AGE_STRIP = /(?:\d{1,3}\s*(?:வயது|வயசு|வயதாகிறது|வயசாகுது|vayasu|vayathu|vayadhu)\S*|(?:வயது|வயசு)\s*\d{1,3})\s*,?/gi;
+const TAMIL_FEMALE = /பெண்|அம்மா|மனைவி|மகள்|அக்கா|தங்கை|பாட்டி|அவள்|கர்ப்ப/;
+const TAMIL_MALE = /ஆண்|அப்பா|கணவர்|கணவன்|மகன்|அண்ணன்|அண்ணா|தம்பி|தாத்தா|அவன்/;
+const TAMIL_PREGNANT = /கர்ப்ப|garbam|karbam/;
+
 function parseCheckin(text) {
   const raw = wordsToDigits(text || "");
   const low = raw.toLowerCase();
@@ -252,17 +269,28 @@ function parseCheckin(text) {
     }
     if (kept.length) { out.name = kept.map((x) => x[0].toUpperCase() + x.slice(1)).join(" "); nameSpan = [m.index, end]; }
   }
-  m = /\b(\d{1,3})\s*(?:years?|yrs?|yr)(?:\s*old)?\b/.exec(low) || /\b(?:age|aged)\s*(?:is\s*)?(\d{1,3})\b/.exec(low);
+  // Tamil / Tanglish: "என் பெயர் கவிதா", "en peru Kavitha"
+  let tamilNameSpan = null;
+  if (!out.name && (m = TAMIL_NAME.exec(raw))) {
+    const n = m[1].replace(/[ .,]+$/, "");
+    out.name = n[0].toUpperCase() + n.slice(1);
+    tamilNameSpan = [m.index, m.index + m[0].length];
+  }
+  m = /\b(\d{1,3})\s*(?:years?|yrs?|yr)(?:\s*old)?\b/.exec(low) || /\b(?:age|aged)\s*(?:is\s*)?(\d{1,3})\b/.exec(low) ||
+    TAMIL_AGE.exec(low) || TAMIL_AGE_BEFORE.exec(low);
   if (m && +m[1] > 0 && +m[1] < 120) out.age = +m[1];
-  if (/\b(female|woman|lady|girl|she|her|mother|wife|daughter|pregnant)\b/.test(low)) out.sex = "female";
-  else if (/\b(male|man|boy|he|his|father|husband|son)\b/.test(low)) out.sex = "male";
-  if (/\bpregnan/.test(low)) out.pregnant = true;
+  if (/\b(female|woman|lady|girl|she|her|mother|wife|daughter|pregnant)\b/.test(low) || TAMIL_FEMALE.test(low)) out.sex = "female";
+  else if (/\b(male|man|boy|he|his|father|husband|son)\b/.test(low) || TAMIL_MALE.test(low)) out.sex = "male";
+  if (/\bpregnan/.test(low) || TAMIL_PREGNANT.test(low)) out.pregnant = true;
   m = /(\+?\d[\d\s-]{8,14}\d)/.exec(raw);
   if (m) { const d = m[1].replace(/\D/g, ""); if (d.length >= 10 && d.length <= 13) out.phone = d; }
 
   let sym = raw;
   if (nameSpan) sym = sym.slice(0, nameSpan[0]) + " " + sym.slice(nameSpan[1]);
+  else if (tamilNameSpan) sym = sym.slice(0, tamilNameSpan[0]) + " " + sym.slice(tamilNameSpan[1]);
   sym = sym.replace(/\b(?:i am|i'm)\s+\d{1,3}\s*(?:years?|yrs?)(?:\s*old)?/gi, "")
+    .replace(/(?:^|(?<=[\s,]))(?:aged\s+)?\d{1,3}\s*(?:years?|yrs?)(?:\s*old)?\s*,?/gi, "")
+    .replace(TAMIL_AGE_STRIP, "")
     .replace(/\b(?:my )?(?:phone|mobile|number)\s*(?:number)?\s*(?:is)?\s*\+?[\d\s-]{8,16}/gi, "")
     .replace(/\s{2,}/g, " ").replace(/^[\s,.]+|[\s,.]+$/g, "");
   if (sym) out.symptoms = sym[0].toUpperCase() + sym.slice(1);

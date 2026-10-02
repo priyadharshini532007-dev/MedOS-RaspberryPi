@@ -129,7 +129,15 @@ DEFAULT_CONDITIONS: List[Dict[str, Any]] = [
                   "medical certificate", "vaccination"]},
 ]
 
+# Tamil and Tanglish words for every condition (medos/triage_tamil.py).
+from .triage_tamil import TAMIL_NEGATION, merged as _with_tamil  # noqa: E402
+
+DEFAULT_CONDITIONS = _with_tamil(DEFAULT_CONDITIONS)
+
 NEGATION = re.compile(r"\b(no|not|without|denies|deny|denied|never|nil|free of|absence of)\b")
+TAMIL_NEG = re.compile(TAMIL_NEGATION)
+# A keyword must start a word: not preceded by a Latin letter, digit or Tamil character.
+WORD_START = r"(?<![a-z0-9஀-௿])"
 SENTENCE_SPLIT = re.compile(r"[.;!?\n]+")
 TEMP_RE = re.compile(
     r"(?:fever|temperature|temp)\D{0,20}?(\d{2,3}(?:\.\d)?)\s*(?:°|degrees?|deg)?\s*(f|c|fahrenheit|celsius)?"
@@ -143,10 +151,13 @@ def normalise(text: str) -> str:
     return re.sub(r"[ \t]+", " ", text)
 
 
-def _negated(text: str, start: int) -> bool:
+def _negated(text: str, start: int, end: Optional[int] = None) -> bool:
     window = text[max(0, start - 40):start]
     window = re.split(r"[,.;!?\n]| but | however ", window)[-1]
-    return bool(NEGATION.search(window))
+    if NEGATION.search(window):
+        return True
+    # Tamil negates after the word: "நெஞ்சு வலி இல்லை" (no chest pain)
+    return end is not None and bool(TAMIL_NEG.search(text[end:end + 24]))
 
 
 def _find_phrase(text: str, phrase: str) -> Optional[int]:
@@ -158,11 +169,11 @@ def _find_phrase(text: str, phrase: str) -> Optional[int]:
     if not phrase:
         return None
     if phrase.endswith("*"):
-        pattern = r"(?<![a-z0-9])" + re.escape(phrase[:-1])
+        pattern = WORD_START + re.escape(phrase[:-1])
     else:
-        pattern = r"(?<![a-z0-9])" + re.escape(phrase) + r"(?:s|es|d|ed|ing)?(?![a-z0-9])"
+        pattern = WORD_START + re.escape(phrase) + r"(?:s|es|d|ed|ing)?(?![a-z0-9])"
     for m in re.finditer(pattern, text):
-        if not _negated(text, m.start()):
+        if not _negated(text, m.start(), m.end()):
             return m.start()
     return None
 

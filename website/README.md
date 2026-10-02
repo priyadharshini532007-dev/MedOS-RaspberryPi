@@ -55,4 +55,4 @@ js/pages-*.js         the pages
 js/app.js             router, alarm bar
 ```
 
-Voice recognition uses the browser's Web Speech API (Chrome, Edge, Safari). Firefox has none, so type there instead. MedOS is a teaching prototype, not a certified medical device.
+Voice recognition uses the browser's Web Speech API (Chrome, Edge, Safari). Firefox has none, so type there instead. Press **தமிழ்** in the voice box to speak Tamil, with English words mixed in if you like; the choice is remembered. Triage understands Tamil and Tanglish symptoms (`js/triage_tamil.js`, generated from `medos/triage_tamil.py` by `python -m medos.triage_tamil`). MedOS is a teaching prototype, not a certified medical device.

@@ -58,7 +58,7 @@ function listenPi({ onPartial, maxSeconds }) {
 // appending them made the text repeat itself. The transcript is rebuilt from the whole result list each
 // time; on Android a result that restates the previous one (grown, or with a word corrected) replaces it.
 const IS_ANDROID = /Android/i.test(navigator.userAgent);
-const normText = (s) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+const normText = (s) => s.toLowerCase().replace(/[^\p{L}\p{M}\p{N}]+/gu, " ").trim();   // \p{M}: Tamil vowel signs
 const wordsOf = (s) => normText(s).split(" ").filter(Boolean);
 function restates(a, b) {
   const wa = wordsOf(a), wb = wordsOf(b);

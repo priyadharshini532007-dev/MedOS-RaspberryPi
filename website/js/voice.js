@@ -48,7 +48,7 @@ const Voice = (() => {
   // name is Kavita I am 34"…). Appending them all made the text snowball, so the transcript is rebuilt
   // from the whole result list every time, and a result that repeats or extends the previous one
   // replaces it instead of being added.
-  const norm = (s) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+  const norm = (s) => s.toLowerCase().replace(/[^\p{L}\p{M}\p{N}]+/gu, " ").trim();   // \p{M}: Tamil vowel signs
   const words = (s) => norm(s).split(" ").filter(Boolean);
   // True when b is a.restated: the same opening words (allowing a word or two to be corrected, e.g.
   // "Kavita" → "Kavitha"), as Android sends when it re-sends a phrase.
@@ -222,17 +222,26 @@ function mountVoice(el, { onResult, source = "reception", compact = false, lang 
       <button type="button" class="btn sm v-pause">${icon("pause")}Pause</button>
       <button type="button" class="btn sm primary v-stop">${icon("stop")}Stop and use</button>
     </div>
-    ${compact ? "" : `<div class="voice-opts">
-      <label class="check"><input type="checkbox" class="v-rec" ${Voice.caps.canRecordWithSpeech ? "checked" : "disabled"}> Save audio clip</label>
-      <select class="v-lang select-sm" aria-label="Recognition language">
-        <option value="en-IN">English (India)</option><option value="en-US">English (US)</option><option value="en-GB">English (UK)</option>
-        <option value="ta-IN">தமிழ் (Tamil)</option><option value="hi-IN">हिन्दी (Hindi)</option></select>
-    </div>`}`;
+    <div class="voice-opts">
+      <div class="seg seg-sm v-lang" role="group" aria-label="Language you will speak">
+        <button type="button" data-lang="en-IN">English</button><button type="button" data-lang="ta-IN" lang="ta">தமிழ்</button></div>
+      ${compact ? "" : `<label class="check"><input type="checkbox" class="v-rec" ${Voice.caps.canRecordWithSpeech ? "checked" : "disabled"}> Save audio clip</label>`}
+    </div>`;
   const btn = $(".mic-btn", el), live = $(".voice-live", el), canvas = $(".wave", el), ctl = $(".voice-ctl", el);
   const pauseBtn = $(".v-pause", el), stopBtn = $(".v-stop", el), timeEl = $(".rec-time", el), label = $(".rec-label", el);
   const g = canvas.getContext("2d");
   let session = null, history = [], paused = false, heard = "", clock = null;
-  if ($(".v-lang", el)) $(".v-lang", el).value = lang;
+  // Spoken language: English, or Tamil (Tamil script, with English words mixed in). Remembered on this device.
+  let speechLang = store("medos.voice.lang") || lang;
+  const showLang = () => $$(".v-lang button", el).forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.lang === speechLang)));
+  showLang();
+  $(".v-lang", el).addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b || session) return;
+    speechLang = b.dataset.lang; store("medos.voice.lang", speechLang); showLang();
+    if (!session) live.textContent = speechLang === "ta-IN"
+      ? "தமிழில் பேசுங்கள் — உங்கள் பெயர், வயது, என்ன பிரச்சனை. (Speak in Tamil; English words are fine too.)"
+      : idle;
+  });
   if (!Voice.caps.speech) btn.disabled = true;
 
   const draw = (level) => {
@@ -270,7 +279,7 @@ function mountVoice(el, { onResult, source = "reception", compact = false, lang 
     timeEl.textContent = "0:00";
     setPaused(false);
     const record = $(".v-rec", el) ? $(".v-rec", el).checked : Voice.caps.canRecordWithSpeech;
-    const lng = $(".v-lang", el) ? $(".v-lang", el).value : lang;
+    const lng = speechLang;
     session = Voice.listen({ lang: lng, record, onPartial: (t) => { heard = t; showLive(); }, onLevel: (v) => draw(v) });
     clock = setInterval(tick, 250);
     try {

@@ -41,6 +41,9 @@ const ML = (() => {
   function predict(symptoms, age = null, vitals = {}, pregnant = false) {
     if (!m || !(symptoms || "").trim()) return null;
     const x = features(symptoms, age, vitals, pregnant);
+    // The model was trained on English. If it recognises none of the words (e.g. a Tamil sentence) it
+    // gives no opinion, rather than guessing from vital signs alone; the rules (which know Tamil) decide.
+    if (![...x.keys()].some((i) => i < m.tfidf.idf.length)) return null;
     const logits = m.coef.map((w, k) => { let z = m.intercept[k]; x.forEach((v, i) => (z += w[i] * v)); return z; });
     const top = Math.max(...logits);
     const exps = logits.map((z) => Math.exp(z - top));
