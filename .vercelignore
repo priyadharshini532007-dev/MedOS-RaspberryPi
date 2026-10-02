@@ -1,0 +1,13 @@
+# Vercel hosts only the static website (website/). The Flask / Raspberry Pi app runs on the Pi
+# or a laptop, so its Python files are left out of the deployment.
+/medos
+/tests
+/deploy
+/laptop
+/design-system
+/data
+/requirements.txt
+/run.py
+/run_windows.bat
+/PLAN.md
+/.claude
