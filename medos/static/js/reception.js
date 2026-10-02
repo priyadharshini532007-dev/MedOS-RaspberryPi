@@ -49,8 +49,48 @@ function vitals() {
   if (+F.pain.value >= 0) v.pain = F.pain.value;
   return v;
 }
+// ------------------------------------------------------------------ Tamil → English
+// Tamil symptoms get an English translation (the browser's on-device translator if it has one, otherwise
+// the free MyMemory service). It is saved with the symptoms as "[English: …]", so the queue, the doctor and
+// the English-trained ML model all read it. Only the symptom text is sent, never the name or phone.
+const TAMIL = /[஀-௿]/;
+const trCache = new Map();
+let enText = null, enFor = null, enAsked = null;
+async function toEnglish(text) {
+  if (trCache.has(text)) return trCache.get(text);
+  let out = null;
+  // The browser's on-device translator, only if the Tamil model is already downloaded (no waiting).
+  const within = (ms, p) => Promise.race([p, new Promise((res) => setTimeout(() => res(null), ms))]);
+  try {
+    if ("Translator" in self && (await within(1500, self.Translator.availability({ sourceLanguage: "ta", targetLanguage: "en" }))) === "available") {
+      const tr = await within(3000, self.Translator.create({ sourceLanguage: "ta", targetLanguage: "en" }));
+      out = tr ? await within(4000, tr.translate(text)) : null;
+    }
+  } catch { out = null; }
+  if (!out) {
+    try {
+      const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 6000);
+      const r = await fetch("https://api.mymemory.translated.net/get?" + new URLSearchParams({ q: text.slice(0, 480), langpair: "ta|en" }), { signal: ctl.signal });
+      clearTimeout(t);
+      const tr = (await r.json())?.responseData?.translatedText;
+      if (tr && !TAMIL.test(tr) && !/MYMEMORY WARNING|QUERY LENGTH LIMIT|INVALID/i.test(tr)) out = tr.replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, "&");
+    } catch { out = null; }
+  }
+  if (out) trCache.set(text, out);
+  return out;
+}
+function translateSymptoms() {
+  const s = F.symptoms.value.trim();
+  if (!TAMIL.test(s) || enAsked === s) return;
+  enAsked = s;
+  toEnglish(s).then((t) => { if (enAsked === s) { enText = t; enFor = s; preview(); } });
+}
+const englishFor = (s) => (enFor === s && enText ? enText : null);
+
 function payload() {
-  return { name: F.name.value.trim(), age: F.age.value.trim(), sex, phone: F.phone.value.trim(), symptoms: F.symptoms.value.trim(),
+  const sym = F.symptoms.value.trim(), en = englishFor(sym);
+  return { name: F.name.value.trim(), age: F.age.value.trim(), sex, phone: F.phone.value.trim(),
+    symptoms: en ? `${sym} [English: ${en}]` : sym,
     vitals: vitals(), pregnant: F.preg.checked, level_override: F.override.value || undefined, source };
 }
 function fill(el, value) {
@@ -58,7 +98,7 @@ function fill(el, value) {
   el.value = value; el.classList.remove("filled"); void el.offsetWidth; el.classList.add("filled");
 }
 function resetForm() {
-  form.reset(); sex = ""; source = "reception"; aiOpinion = null;
+  form.reset(); sex = ""; source = "reception"; aiOpinion = null; enText = enFor = enAsked = null;
   $$("#f-sex button").forEach((x) => x.setAttribute("aria-pressed", "false"));
   $("#pain-val").textContent = "not asked";
   $("#transcript").classList.add("hidden");
@@ -70,6 +110,7 @@ function resetForm() {
 // ------------------------------------------------------------------ live priority preview
 let lastTriage = null, aiOpinion = null;
 const preview = debounce(async () => {
+  translateSymptoms();
   const p = payload();
   aiOpinion = null;
   if (!p.symptoms && !Object.keys(p.vitals).length) return renderTriage(null);
@@ -93,6 +134,7 @@ function renderTriage(t) {
     <div class="row wrap gap-8">${prio(t.level, { lg: true })}<span class="text-2 strong">${LEVEL_TARGET[t.level]}</span></div>
     <p class="mt-8"><b>${esc(t.primary_condition || "")}</b>${t.department ? `<span class="muted"> · ${esc(t.department)}</span>` : ""}</p>
     ${flags.size ? `<div class="row wrap gap-4 mt-8">${[...flags].map((r) => `<span class="badge warn">${icon("octagon")}${esc(r)}</span>`).join("")}</div>` : ""}
+    ${TAMIL.test(F.symptoms.value) ? `<p class="en-line mt-8">${englishFor(F.symptoms.value.trim()) ? `<b>In English:</b> ${esc(englishFor(F.symptoms.value.trim()))} <span class="muted">· machine translation</span>` : `<span class="muted">Translating to English…</span>`}</p>` : ""}
     <details class="why mt-8"><summary>Why this priority</summary><ul class="reasons">${(t.reasons || []).map((r) => `<li>${esc(r)}</li>`).join("")}</ul></details>
     ${t.ml ? mlHtml(t) : ""}
     ${chosen && chosen !== t.level ? `<p class="t-small mt-8"><b>You chose ${LEVEL_LABEL[chosen]}.</b> That will be used instead.</p>` : ""}

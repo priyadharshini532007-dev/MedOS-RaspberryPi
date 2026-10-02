@@ -510,3 +510,6 @@ details.disclose > .disclose-body { padding: 0 14px 14px; }
 .ml-bar i { height: 8px; border-radius: 99px; background: var(--surface-3); overflow: hidden; display: block; }
 .ml-bar i b { display: block; height: 100%; border-radius: 99px; }
 .ml-bar em { font-style: normal; text-align: right; font-variant-numeric: tabular-nums; color: var(--text-2); }
+
+/* English translation of a Tamil check-in (reception) */
+.en-line { padding: 8px 10px; border-radius: var(--radius-sm); background: var(--info-soft); font-size: 14px; }

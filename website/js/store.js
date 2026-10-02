@@ -146,12 +146,15 @@ function estimates(queue, t = Date.now()) {
 function register(data, source = "reception", { arrived = Date.now(), dispatchNow = true, silent = false, hospitalId = SELF_ID, token: fixedToken = null } = {}) {
   const vitals = Object.fromEntries(Object.entries(data.vitals || {}).filter(([, v]) => v !== "" && v != null));
   const age = data.age === "" || data.age == null ? null : parseInt(data.age, 10);
-  const r = analyse(data.symptoms || "", age, vitals, !!data.pregnant);
+  // A Tamil check-in may come with its English translation: the rules read both (a sentence apart, so
+  // negation can't leak across), and the English-trained ML model reads the English.
+  const en = (data.symptomsEn || "").trim();
+  const r = analyse((data.symptoms || "") + (en ? ". " + en : ""), age, vitals, !!data.pregnant);
   let level = r.level, rank = r.rank, levelSource = "rules";
   const reasons = [...r.reasons];
   if (data.level_override && LEVEL_ORDER[data.level_override] < LEVEL_ORDER[level]) { level = data.level_override; rank = level === "critical" ? 0 : rank; levelSource = "manual"; }
   // Machine-learning second opinion (ml/train.py): may only RAISE the level, and only when confident.
-  const ml = S.settings.ml_triage !== false && ML.available ? ML.predict(data.symptoms || "", age, vitals, !!data.pregnant) : null;
+  const ml = S.settings.ml_triage !== false && ML.available ? ML.predict(en || data.symptoms || "", age, vitals, !!data.pregnant) : null;
   const mlUp = levelSource !== "manual" && !data.emergency ? ML.upgrade(level, ml) : null;
   if (mlUp) {
     reasons.push(`ML model: ${LEVEL_LABEL[mlUp]} (${Math.round(ml.confidence * 100)}% confident${ml.topTerms.length ? ', from "' + ml.topTerms.slice(0, 2).join(", ") + '"' : ""}) — raised from ${LEVEL_LABEL[level]}`);
@@ -161,7 +164,8 @@ function register(data, source = "reception", { arrived = Date.now(), dispatchNo
   const token = fixedToken || String(nextId("token")).padStart(3, "0");
   const p = {
     id, token, code: randCode(), day: today(), hospitalId, name: (data.name || "").trim() || null, age, sex: data.sex || null, phone: data.phone || null,
-    symptoms: (data.symptoms || "").trim(), vitals, pregnant: !!data.pregnant, level, rank, base: baseScore(level, rank, r.bonus),
+    symptoms: (data.symptoms || "").trim(), symptomsEn: en || null, translationSource: en ? data.translationSource || null : null,
+    vitals, pregnant: !!data.pregnant, level, rank, base: baseScore(level, rank, r.bonus),
     primary: r.primary_condition, conditions: r.conditions, red_flags: r.red_flags, reasons, department: r.department,
     rulesLevel: r.level, levelSource, mlLevel: ml ? ml.level : null, mlConfidence: ml ? ml.confidence : null,
     source, emergency: !!data.emergency, preempted: false, status: "waiting", doctorId: null, roomId: null,
@@ -174,7 +178,36 @@ function register(data, source = "reception", { arrived = Date.now(), dispatchNo
   if (data.voiceId) { const v = S.voice.find((x) => x.id === data.voiceId); if (v) { v.patientId = id; v.status = "registered"; } }
   if (dispatchNow && hospitalId === SELF_ID && S.settings.auto_dispatch) dispatch("arrival");
   if (!silent) save("arrival");
+  // Tamil without a translation yet: translate in the background and add it when it arrives.
+  if (!en && typeof Translate !== "undefined" && Translate.isTamil(p.symptoms)) {
+    Translate.toEnglish(p.symptoms).then((t) => t && attachTranslation(p.id, t)).catch(() => {});
+  }
   return p;
+}
+
+// Add an English translation to a patient who registered in Tamil. The queue shows it at once; if the
+// English reads as more urgent (rules or a confident ML model), the level is raised — never lowered.
+function attachTranslation(pid, en) {
+  const p = getPatient(pid);
+  if (!p || !en || !en.text || p.symptomsEn === en.text) return;
+  p.symptomsEn = en.text; p.translationSource = en.source;
+  if (p.status === "waiting" && p.levelSource !== "manual" && !p.emergency) {
+    const t = analyse(p.symptoms + ". " + en.text, p.age, p.vitals, p.pregnant);
+    let lvl = t.level, how = "the English translation";
+    const ml = S.settings.ml_triage !== false && ML.available ? ML.predict(en.text, p.age, p.vitals, p.pregnant) : null;
+    if (ml) {
+      p.mlLevel = ml.level; p.mlConfidence = ml.confidence;
+      const up = ML.upgrade(lvl, ml);
+      if (up) { lvl = up; how = `the ML model reading the English (${Math.round(ml.confidence * 100)}%)`; }
+    }
+    if (LEVEL_ORDER[lvl] < LEVEL_ORDER[p.level]) {
+      p.reasons = [...p.reasons, `${LEVEL_LABEL[lvl]} from ${how} — raised from ${LEVEL_LABEL[p.level]}`];
+      log("ML", `Token ${p.token}: English translation "${en.text}" raised the level from ${LEVEL_LABEL[p.level]} to ${LEVEL_LABEL[lvl]}`, p.id);
+      p.level = lvl; p.rank = lvl === "critical" ? 0 : p.rank; p.base = baseScore(p.level, p.rank, t.bonus); p.levelSource = "translation";
+      if (t.primary_condition && t.primary_condition !== "Unclassified complaint") { p.primary = t.primary_condition; p.department = t.department; }
+    }
+  }
+  save("translation");
 }
 const getPatient = (id) => S.patients.find((p) => p.id === id);
 const patientByCode = (code) => S.patients.find((p) => p.code === code);
@@ -457,7 +490,7 @@ function recommendToken({ symptoms, age, pregnant, department }, origin, travel 
   return { triage: t, dept, consult, rows, best, bestSpecialist: bestSpecialist && bestSpecialist !== best ? bestSpecialist : null };
 }
 
-function bookToken({ name, age, sex, phone, symptoms, pregnant, voiceId }, row, origin) {
+function bookToken({ name, age, sex, phone, symptoms, symptomsEn, translationSource, pregnant, voiceId }, row, origin) {
   const h = row.h;
   const id = nextId("booking");
   const b = { id, type: "token", hospitalId: h.id, hospitalName: h.name, created: Date.now(), name, age, phone, symptoms, origin,
@@ -465,7 +498,7 @@ function bookToken({ name, age, sex, phone, symptoms, pregnant, voiceId }, row, 
   // Every booking joins the Reception list at once. City General's goes into the live scheduler; another
   // hospital's is tagged with that hospital and follows its reported queue (see syncOtherHospitals).
   const token = h.self ? null : `${h.short.slice(0, 2).toUpperCase()}-${String(20 + Math.floor(Math.random() * 60) + row.ahead).padStart(3, "0")}`;
-  const p = register({ name, age, sex, phone, symptoms, pregnant, voiceId }, "online booking", { hospitalId: h.id, token, silent: true });
+  const p = register({ name, age, sex, phone, symptoms, symptomsEn, translationSource, pregnant, voiceId }, "online booking", { hospitalId: h.id, token, silent: true });
   log("ARRIVE", `Token ${p.token} booked online for ${h.name}: ${LEVEL_LABEL[p.level]} — ${p.primary} (score ${Math.round(p.base)})`, p.id);
   b.patientId = p.id; b.token = p.token; b.code = p.code; b.level = p.level;
   S.bookings.push(b);
@@ -686,6 +719,14 @@ function addVoiceInput({ transcript, fields, source, audioId, durationS, lang })
   if (S.voice.length > 80) S.voice = S.voice.slice(-80);
   log("VOICE", `Voice input #${v.id} (${source}, ${durationS ? durationS.toFixed(1) + " s" : "typed"}): ${LEVEL_LABEL[t.level]} — ${t.primary_condition}`);
   save("voice");
+  // Tamil: add the English translation when it arrives (shown in Voice intake and used when registering).
+  const sym = fields.symptoms || transcript;
+  if (typeof Translate !== "undefined" && Translate.isTamil(sym)) {
+    Translate.toEnglish(sym).then((en) => {
+      const live = en && S.voice.find((x) => x.id === v.id);
+      if (live) { live.symptomsEn = en.text; live.translationSource = en.source; save("translation"); }
+    }).catch(() => {});
+  }
   return v;
 }
 // Recorded inputs in priority order: live queue score if the patient is waiting, otherwise base score.

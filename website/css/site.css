@@ -533,3 +533,10 @@ dialog.modal::backdrop { background: rgba(15, 23, 42, .5); }
 .hosp-pick > span { display: inline-flex; align-items: center; gap: 6px; }
 .hosp-pick > span .ico { width: 16px; height: 16px; }
 .token-chip { white-space: nowrap; }
+
+/* English translation of a Tamil check-in */
+.en-line { display: flex; gap: 8px; align-items: flex-start; margin-top: 6px; padding: 8px 10px; border-radius: 10px; background: var(--info-soft); color: var(--text); font-size: 14px; }
+.en-line .ico { width: 16px; height: 16px; color: var(--info); flex-shrink: 0; margin-top: 2px; }
+.en-line.muted { color: var(--muted); background: var(--surface-2); }
+.qrow .who .q-en { display: flex; gap: 5px; align-items: center; color: var(--info); font-weight: 600; white-space: normal; }
+.qrow .who .q-en .ico { width: 13px; height: 13px; flex-shrink: 0; }

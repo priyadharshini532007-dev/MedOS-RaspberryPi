@@ -16,6 +16,7 @@ function queueRows(q, eta, { actions = false, showHosp = false, fresh = new Set(
     return `<div class="qrow ${fresh.has(p.id) ? "flash" : ""}" data-pid="${p.id}">
     <span class="pos">${p.position}</span>${tokenChip(p.token, p.level)}
     <span class="who"><b>${esc(p.name || "Unnamed")} ${fresh.has(p.id) ? `<span class="pill brand">New</span>` : ""}${p.emergency ? `<span class="pill bad">${icon("siren")}Emergency</span>` : ""}${p.preempted ? `<span class="pill warn">Resumes next</span>` : ""}${p.voiceId ? `<span class="pill info" title="Registered by voice">${icon("mic")}</span>` : ""}</b>
+      ${p.symptomsEn ? `<small class="q-en" lang="en" title="${esc(p.symptoms)}">${icon("send")}“${esc(p.symptomsEn)}”</small>` : ""}
       <small>${showHosp ? `<b class="hosp-tag" data-self="${h.self ? 1 : 0}">${esc(h.short)}${p.hospPosition ? " #" + p.hospPosition : ""}</b> · ` : ""}${esc(ageSex(p))}${ageSex(p) ? " · " : ""}${esc(p.primary)} · ${esc(p.source)}</small></span>
     <span class="lvl">${prio(p.level)}${priorityBar(p)}</span>
     <span class="eta"><b>${eta[p.id] == null ? "—" : fmtMin(eta[p.id])}</b><span class="muted">waited ${fmtMin((Date.now() - p.arrived) / 60000)}</span>
@@ -108,23 +109,35 @@ PAGES.reception = {
       if (r.fields.pregnant) form.pregnant.checked = true;
       preview();
     } });
-    const data = () => ({ name: form.name.value, age: form.age.value, sex: form.sex.value, phone: form.phone.value, symptoms: form.symptoms.value, pregnant: form.pregnant.checked,
-      vitals: { temp: form.temp.value, pulse: form.pulse.value, spo2: form.spo2.value, bp_sys: form.bp_sys.value, pain: form.pain.value }, voiceId });
+    let en = null, enAsked = null;   // English translation of Tamil symptoms: {text, source, for}
+    const enFor = (sym) => (en && en.for === sym && en.text ? en : null);
+    const data = () => {
+      const sym = form.symptoms.value, tr = enFor(sym);
+      return { name: form.name.value, age: form.age.value, sex: form.sex.value, phone: form.phone.value, symptoms: sym, pregnant: form.pregnant.checked,
+        vitals: { temp: form.temp.value, pulse: form.pulse.value, spo2: form.spo2.value, bp_sys: form.bp_sys.value, pain: form.pain.value }, voiceId,
+        ...(tr ? { symptomsEn: tr.text, translationSource: tr.source } : {}) };
+    };
     function preview() {
       const d = data();
+      const tamil = Translate.isTamil(d.symptoms);
+      if (tamil && enAsked !== d.symptoms) {
+        const asked = (enAsked = d.symptoms);
+        Translate.toEnglish(asked).then((r) => { if (enAsked === asked) { en = { ...(r || { text: "" }), for: asked }; if (el.isConnected) preview(); } });
+      }
       if (!d.symptoms.trim()) { $("#preview", el).innerHTML = ""; $("#tri", el).innerHTML = ""; return; }
       const vit = Object.fromEntries(Object.entries(d.vitals).filter(([, v]) => v !== ""));
-      const t = analyse(d.symptoms, d.age, vit, d.pregnant);
+      const t = analyse(d.symptoms + (d.symptomsEn ? ". " + d.symptomsEn : ""), d.age, vit, d.pregnant);
       $("#tri", el).innerHTML = prio(t.level);
       const ahead = readyQueue().filter((p) => p.score.total >= t.base_score).length;
       $("#preview", el).innerHTML = `<div class="why" style="border-color:${LEVEL_COLOR[t.level]}"><div class="row-between"><b>${esc(t.primary_condition)}</b><span class="t-small muted">score ${Math.round(t.base_score)} · ${esc(t.department)}</span></div>
-        <div class="quote" style="margin:6px 0">${highlightSymptoms(d.symptoms, t.spans)}</div>
+        <div class="quote" style="margin:6px 0">${highlightSymptoms(d.symptoms, analyse(d.symptoms, d.age, vit, d.pregnant).spans)}</div>
+        ${tamil ? englishLine(enFor(d.symptoms), { pending: !en || en.for !== d.symptoms }) : ""}
         <ul style="margin:0;padding-left:18px" class="t-small">${t.reasons.map((r) => `<li>${esc(r)}</li>`).join("")}</ul>
         <div class="t-small muted" style="margin-top:4px">Would join at position ${ahead + 1} · ${LEVEL_TARGET[t.level]}</div></div>
-        ${mlPanel(ML.predict(d.symptoms, d.age, vit, d.pregnant), t.level)}`;
+        ${mlPanel(ML.predict(d.symptomsEn || d.symptoms, d.age, vit, d.pregnant), t.level)}`;
     }
     form.addEventListener("input", debounce(preview, 200));
-    $("#clr", el).addEventListener("click", () => { form.reset(); voiceId = null; preview(); });
+    $("#clr", el).addEventListener("click", () => { form.reset(); voiceId = null; en = enAsked = null; preview(); });
     $("#reg", el).addEventListener("click", () => {
       if (!form.symptoms.value.trim()) { form.symptoms.focus(); return toast("Enter the symptoms first", "warn"); }
       const p = register(data(), voiceId ? "voice" : "reception");
@@ -237,7 +250,8 @@ PAGES.voice = {
     const register1 = (id) => {
       const v = S.voice.find((x) => x.id === id);
       if (!v || v.patientId) return;
-      const p = register({ ...v.fields, symptoms: v.fields.symptoms || v.transcript, voiceId: v.id }, "voice");
+      const p = register({ ...v.fields, symptoms: v.fields.symptoms || v.transcript, voiceId: v.id,
+        ...(v.symptomsEn ? { symptomsEn: v.symptomsEn, translationSource: v.translationSource } : {}) }, "voice");
       toast(`Token ${p.token} added — ${LEVEL_LABEL[p.level]}`);
       $("#last", el).innerHTML = "";
     };
@@ -264,6 +278,7 @@ PAGES.voice = {
           <div class="stack-sm" style="min-width:0">
             <div class="row">${prio(v.level)}<b>${esc(v.primary)}</b><span class="t-small muted">score ${Math.round(v.score)}</span></div>
             <div class="quote">“${highlightSymptoms(v.transcript, analyse(v.transcript, v.fields.age).spans)}”</div>
+            ${v.symptomsEn ? englishLine({ text: v.symptomsEn, source: v.translationSource }) : Translate.isTamil(v.transcript) && Date.now() - v.ts < 20000 ? englishLine(null, { pending: true }) : ""}
             ${fieldChips(v.fields)}
             <div class="t-xs muted">${fmtClock(v.ts, true)} · ${esc(v.source)}${v.durationS ? ` · ${v.durationS.toFixed(1)} s` : ""}${v.lang ? ` · ${esc(v.lang)}` : ""}</div>
           </div>
@@ -301,6 +316,7 @@ PAGES.doctor = {
           ${pre ? `<div class="notice warn">${icon("siren")}<div><b>Emergency interrupt.</b> Token ${esc(S.lastPreempt.victim)} was paused and returns to the head of the queue; Token ${esc(S.lastPreempt.token)} is with you now.</div></div>` : ""}
           ${p ? `<div class="row" style="gap:16px">${tokenChip(p.token, p.level)}<div><div class="t-h2">${esc(p.name || "Unnamed")}</div><div class="muted">${esc(ageSex(p))}</div></div><div style="margin-left:auto">${prio(p.level, { lg: true })}</div></div>
             <div class="why" style="border-color:${LEVEL_COLOR[p.level]}"><div class="quote">${highlightSymptoms(p.symptoms, analyse(p.symptoms, p.age, p.vitals, p.pregnant).spans)}</div>
+              ${p.symptomsEn ? englishLine({ text: p.symptomsEn, source: p.translationSource }) : ""}
               <ul class="t-small" style="margin:6px 0 0;padding-left:18px">${p.reasons.map((r) => `<li>${esc(r)}</li>`).join("")}</ul></div>
             ${Object.keys(p.vitals || {}).length ? `<div class="vitals">${Object.entries(p.vitals).map(([k, v]) => `<span class="vital">${icon({ temp: "thermo", pulse: "pulse", spo2: "drop", bp_sys: "gauge", pain: "bolt" }[k] || "info")}${esc({ temp: "Temp", pulse: "Pulse", spo2: "SpO₂", bp_sys: "BP", pain: "Pain" }[k])} <b>${esc(v)}</b></span>`).join("")}</div>` : ""}
             <div class="t-small muted">Waited ${fmtMin((p.wait_s || 0) / 60)} · with you <span id="timer">${fmtMin((Date.now() - p.called) / 60000)}</span> · ${esc(p.source)}${p.voiceId ? " · registered by voice" : ""}</div>

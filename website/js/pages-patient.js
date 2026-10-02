@@ -175,6 +175,7 @@ PAGES.patient = {
                 <label class="field c3"><span>Department</span><select class="select" name="dept"><option value="">Suggested by triage</option>${DEPARTMENTS.filter((d) => d !== "Emergency").map((d) => `<option>${d}</option>`).join("")}</select></label>
                 <label class="check c6"><input type="checkbox" name="pregnant"> Pregnant</label>
               </form>
+              <div id="en-note"></div>
               <div id="ml-note"></div>
               <div id="crit-note"></div>
             </div>
@@ -246,12 +247,28 @@ PAGES.patient = {
       update(true);
     }
 
+    let en = null, enAsked = null;   // English translation of Tamil symptoms: {text, source, for}
+    function translateNow(text) {
+      if (enAsked === text) return;
+      enAsked = text;
+      Translate.toEnglish(text).then((r) => {
+        if (enAsked !== text) return;
+        en = r ? { ...r, for: text } : { text: "", source: "", for: text };
+        if (el.isConnected) update(false);
+      });
+    }
     function update(redrawRoutes = true) {
       const d = data();
       store("medos.patient.draft", { ...d, dept: form.dept.value });
       const t = analyse(d.symptoms, d.age, {}, d.pregnant);
       $("#tri", el).innerHTML = d.symptoms ? `${prio(t.level)} <span class="t-small muted">${esc(t.department)}</span>` : "";
-      $("#ml-note", el).innerHTML = d.symptoms ? mlPanel(ML.predict(d.symptoms, d.age, {}, d.pregnant), t.level, { compact: true }) : "";
+      // Tamil symptoms: show the English translation, and let the English-trained model read it
+      const tamil = Translate.isTamil(d.symptoms);
+      if (!tamil) en = null;
+      else if (!en || en.for !== d.symptoms) translateNow(d.symptoms);
+      $("#en-note", el).innerHTML = tamil ? englishLine(en && en.for === d.symptoms && en.text ? en : null, { pending: !en || en.for !== d.symptoms }) : "";
+      const mlText = tamil && en && en.for === d.symptoms ? en.text : d.symptoms;
+      $("#ml-note", el).innerHTML = d.symptoms ? mlPanel(ML.predict(mlText, d.age, {}, d.pregnant), t.level, { compact: true }) : "";
       $("#crit-note", el).innerHTML = d.symptoms && t.level === "critical"
         ? `<div class="notice bad">${icon("siren")}<div><b>This sounds like an emergency (${esc(t.primary_condition)}).</b> Don't travel on your own — <a href="#/patient/ambulance" data-to-amb>book an ambulance</a> or call 108.</div></div>` : "";
       rec = recommendToken(d, ORIGIN, travel);
@@ -367,7 +384,8 @@ PAGES.patient = {
         <p class="t-small muted">Your place in the queue is held from now. Patients who are sicker than you can still be seen first — that's how MedOS keeps everyone safe.</p>`,
         actions: [{ label: "Back", value: false }, { label: "Book token", kind: "primary", icon: "ticket", value: true, primary: true }] });
       if (!ok) return;
-      const b = bookToken({ ...d, voiceId }, r, { lat: ORIGIN.lat, lng: ORIGIN.lng, label: ORIGIN.label });
+      const tr = en && en.for === d.symptoms && en.text ? { symptomsEn: en.text, translationSource: en.source } : {};
+      const b = bookToken({ ...d, ...tr, voiceId }, r, { lat: ORIGIN.lat, lng: ORIGIN.lng, label: ORIGIN.label });
       store("medos.patient.draft", null);
       chime();
       toast(`Token ${b.token} booked at ${r.h.short} — it's in their Reception queue now`);
