@@ -19,7 +19,7 @@ import threading
 import time
 from typing import Any, Callable, Dict, List, Optional
 
-from . import db, triage
+from . import db, ml_triage, triage
 from .events import bus, log
 
 PREEMPT_FLOOR = 1450.0     # pre-empted patients resume before every non-critical case
@@ -202,6 +202,17 @@ class Scheduler:
             rank = 0 if override == "critical" else rank
             level = override
             base = triage.base_score(level, rank, result["bonus"])
+        # Machine-learning second opinion (ml/train.py). It may only RAISE the level, only when it is
+        # confident, and never overrides staff.
+        ml_pred = ml_triage.predict(symptoms, age, vitals, pregnant) if db.get_setting("ml_triage") and symptoms else None
+        ml_up = ml_triage.upgrade(level, ml_pred) if level_source != "manual" and not data.get("emergency") else None
+        if ml_up:
+            reasons = reasons + ["ML model: %s (%d%% confident, from \"%s\") — raised from %s" % (
+                triage.LEVEL_LABEL[ml_up], round(ml_pred["confidence"] * 100), ", ".join(ml_pred["top_terms"][:2]) or "vitals",
+                triage.LEVEL_LABEL[level])]
+            rank = 0 if ml_up == "critical" else rank
+            level, level_source = ml_up, "ml"
+            base = triage.base_score(level, rank, result["bonus"])
         t = arrived_at or time.time()
         with self.lock:
             seq = (db.scalar("SELECT COUNT(*) FROM patients WHERE day=?", (db.today(),)) or 0) + 1
@@ -216,6 +227,8 @@ class Scheduler:
                 "symptoms": symptoms, "vitals": db.encode(vitals), "pregnant": 1 if pregnant else 0,
                 "level": level, "rank": rank, "base_score": base, "rules_level": result["level"],
                 "level_source": level_source,
+                "ml_level": ml_pred["level"] if ml_pred else None,
+                "ml_confidence": ml_pred["confidence"] if ml_pred else None,
                 "primary_condition": result["primary_condition"],
                 "conditions": db.encode(result["conditions"]), "red_flags": db.encode(result["red_flags"]),
                 "reasons": db.encode(reasons), "department": result["department"],
@@ -227,6 +240,10 @@ class Scheduler:
             log("ARRIVE", "Token %s registered via %s — %s (%s), base priority %d" % (
                 token, source, triage.LEVEL_LABEL[level], result["primary_condition"], base), pid,
                 {"level": level, "score": base})
+            if ml_pred:
+                log("ML", "Token %s: model predicts %s (%d%%)%s" % (
+                    token, triage.LEVEL_LABEL[ml_pred["level"]], round(ml_pred["confidence"] * 100),
+                    " — raised the level from %s" % triage.LEVEL_LABEL[result["level"]] if ml_up else ", rules level kept"), pid)
             if dispatch:
                 self.dispatch(reason="arrival")
                 if level == "critical" and db.get_setting("preemption") == "critical":

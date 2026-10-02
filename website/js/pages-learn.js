@@ -169,6 +169,7 @@ defaults:   aging 5 points/minute, limit 450</pre>
           <p><b>Doctors and queues:</b> City General's come live from the MedOS queue; the other hospitals' are a simulated live feed that changes every 3 minutes.</p>
         </div></section>
       </div>
+      ${mlAboutCard()}
       <section class="card" style="margin-top:16px"><div class="card-head"><h2 class="t-h3">${icon("chip")}Operating-system concepts, and where to see them</h2></div>
         <div class="table-wrap"><table class="tbl"><thead><tr><th>Concept</th><th>In MedOS Web</th><th>Watch it live</th></tr></thead><tbody>${os.map((r) => `<tr><td class="strong">${r[0]}</td><td>${r[1]}</td><td class="muted">${r[2]}</td></tr>`).join("")}</tbody></table></div></section>
       <div class="grid-2" style="margin-top:16px">
@@ -184,3 +185,21 @@ defaults:   aging 5 points/minute, limit 450</pre>
       <p class="t-xs muted" style="margin-top:20px">MedOS is a decision-support prototype for teaching and demonstration. It isn't a certified medical device. In an emergency in India, call 108.</p></div>`;
   },
 };
+
+// Machine-learning priority model: what it is and how well it does (numbers come from the trained model).
+function mlAboutCard() {
+  if (!ML.available) return "";
+  const m = ML.metrics, pct = (x) => (x * 100).toFixed(1) + "%";
+  return `<section class="card" style="margin-top:16px"><div class="card-head"><h2 class="t-h3">${icon("cpu")}Machine-learning priority model</h2><span class="pill">Trained on synthetic data</span></div>
+    <div class="card-body stack-sm t-small muted-2">
+      <p>Alongside the rules, a trained model reads the symptoms and vital signs and predicts the priority. It is a multinomial logistic regression on TF-IDF word features plus standardised vitals, trained with scikit-learn (<code>ml/train.py</code>) on ${m.train_rows.toLocaleString()} rows of a synthetic dataset generated from the triage protocol (<code>ml/data/triage_synthetic.csv</code>). The same trained numbers run here in your browser and on the Raspberry Pi.</p>
+      <p><b>How it is used:</b> the rules decide first. The model may only <b>raise</b> a priority, and only when it is at least 75% confident — it can never push a patient down the queue. You can see its opinion in the Reception preview and on the booking page.</p>
+      <div class="table-wrap"><table class="tbl"><thead><tr><th>Tested on ${m.test_rows.toLocaleString()} held-out patients</th><th class="r">Accuracy</th></tr></thead><tbody>
+        <tr><td>Rules engine alone</td><td class="r num">${pct(m.rules_accuracy)}</td></tr>
+        <tr><td>ML model alone</td><td class="r num">${pct(m.accuracy)}</td></tr>
+        <tr><td><b>Rules + ML upgrade (what MedOS uses)</b></td><td class="r num"><b>${pct(m.combined_accuracy)}</b></td></tr>
+        <tr><td>Phrasings never seen in training — rules alone / rules + ML</td><td class="r num">${pct(m.unseen_phrasing_rules_accuracy)} / ${pct(m.unseen_phrasing_combined_accuracy)}</td></tr>
+      </tbody></table></div>
+      <p class="t-xs muted">Synthetic data shows the method works; it is not clinical validation. Full report: <code>ml/reports/metrics.md</code>.</p>
+    </div></section>`;
+}

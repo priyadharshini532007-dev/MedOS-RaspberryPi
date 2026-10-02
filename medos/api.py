@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional
 
 from flask import Blueprint, Response, jsonify, request, session, stream_with_context
 
-from . import config, db, sysmon, triage
+from . import config, db, ml_triage, sysmon, triage
 from .events import bus, log, recent
 from .llm import LLMError, ai_worker, llm, local_ipv4
 from .scheduler import SchedulerError, scheduler
@@ -85,7 +85,7 @@ def room_names() -> Dict[int, str]:
 def patient_view(p: Dict[str, Any], rooms: Dict[int, str], doctors: Dict[int, str]) -> Dict[str, Any]:
     keep = ("id", "token", "code", "name", "age", "sex", "phone", "symptoms", "vitals", "pregnant", "level",
             "rank", "base_score", "primary_condition", "conditions", "red_flags", "reasons", "department",
-            "rules_level", "level_source", "ai_status", "ai_level", "ai_summary", "ai_reasoning",
+            "rules_level", "level_source", "ml_level", "ml_confidence", "ai_status", "ai_level", "ai_summary", "ai_reasoning",
             "ai_department", "ai_brief", "source", "emergency", "preempted", "status", "doctor_id", "room_id",
             "arrived_at", "called_at", "completed_at", "wait_seconds", "consult_seconds", "recalls", "outcome",
             "doctor_notes", "score", "position", "eta")
@@ -364,7 +364,27 @@ def triage_preview():
     b = body()
     res = triage.analyse(b.get("symptoms") or "", b.get("age"), b.get("sex"), b.get("vitals") or {},
                          bool(b.get("pregnant")), scheduler.conditions())
+    if db.get_setting("ml_triage"):
+        pred = ml_triage.predict(b.get("symptoms") or "", b.get("age"), b.get("vitals") or {}, bool(b.get("pregnant")))
+        res["ml"] = pred
+        res["ml_upgrade"] = ml_triage.upgrade(res["level"], pred)
     return jsonify(res)
+
+
+# ---------------------------------------------------------------- machine-learning priority model
+
+@api.post("/ml/predict")
+def ml_predict():
+    b = body()
+    pred = ml_triage.predict(b.get("symptoms") or "", b.get("age"), b.get("vitals") or {}, bool(b.get("pregnant")))
+    if pred is None:
+        raise ApiError("Describe the symptoms, or train the model with python ml/train.py", 422)
+    return jsonify(pred)
+
+
+@api.get("/ml/info")
+def ml_info():
+    return jsonify(ml_triage.info())
 
 
 @api.post("/triage/ai")
@@ -877,7 +897,7 @@ def qr():
 INT_SETTINGS = ("pharmacy_prep_min", "ambulance_speed_kmh", "tick_seconds", "notify_ahead", "dur_critical", "dur_high", "dur_medium", "dur_low",
                 "llm_timeout", "alarm_buzzer_seconds")
 FLOAT_SETTINGS = ("aging_rate", "aging_cap")
-BOOL_SETTINGS = ("auto_dispatch", "llm_enabled", "ai_triage", "announce", "buzz_on_call")
+BOOL_SETTINGS = ("auto_dispatch", "llm_enabled", "ai_triage", "ml_triage", "announce", "buzz_on_call")
 STR_SETTINGS = ("hospital_name", "llm_url", "llm_model", "voice_lang", "display_message")
 
 

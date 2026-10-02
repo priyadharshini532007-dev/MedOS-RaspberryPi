@@ -94,9 +94,21 @@ function renderTriage(t) {
     <p class="mt-8"><b>${esc(t.primary_condition || "")}</b>${t.department ? `<span class="muted"> · ${esc(t.department)}</span>` : ""}</p>
     ${flags.size ? `<div class="row wrap gap-4 mt-8">${[...flags].map((r) => `<span class="badge warn">${icon("octagon")}${esc(r)}</span>`).join("")}</div>` : ""}
     <details class="why mt-8"><summary>Why this priority</summary><ul class="reasons">${(t.reasons || []).map((r) => `<li>${esc(r)}</li>`).join("")}</ul></details>
+    ${t.ml ? mlHtml(t) : ""}
     ${chosen && chosen !== t.level ? `<p class="t-small mt-8"><b>You chose ${LEVEL_LABEL[chosen]}.</b> That will be used instead.</p>` : ""}
     <div class="mt-16" id="ai-box">${aiOpinion ? aiHtml(aiOpinion) : `<button type="button" class="btn btn-sm" id="ask-ai">${icon("spark")}Ask AI for a second opinion</button>`}</div>`;
   const ask = $("#ask-ai"); if (ask) ask.addEventListener("click", askAi);
+}
+// Machine-learning model's opinion (medos/ml_triage.py): probability per level, and whether it raises the level.
+function mlHtml(t) {
+  const m = t.ml;
+  const bars = LEVELS.map((l) => `<div class="ml-bar"><span>${LEVEL_LABEL[l]}</span><i><b style="width:${Math.round((m.probabilities[l] || 0) * 100)}%;background:var(--${{ critical: "crit", high: "high", medium: "med", low: "low" }[l]})"></b></i><em>${Math.round((m.probabilities[l] || 0) * 100)}%</em></div>`).join("");
+  const verdict = t.ml_upgrade ? `<b>Raises the priority to ${LEVEL_LABEL[t.ml_upgrade]}</b> when registered (confident, and higher than the rules).`
+    : m.level === t.level ? "Agrees with the rules." : LEVELS.indexOf(m.level) > LEVELS.indexOf(t.level) ? "Rates it lower — the model can never lower a priority, so the rules level stays."
+    : "Rates it higher but isn't confident enough (needs 75%), so the rules level stays.";
+  return `<div class="ml-box mt-8"><div class="ml-title">${icon("cpu")}ML model: ${LEVEL_LABEL[m.level]} · ${Math.round(m.confidence * 100)}% confident</div>
+    <div class="ml-bars">${bars}</div>
+    <p class="t-small mt-4">${verdict}${m.top_terms && m.top_terms.length ? ` <span class="muted">Key words: ${m.top_terms.map(esc).join(", ")}.</span>` : ""}</p></div>`;
 }
 function aiHtml(a) {
   if (a.loading) return `<div class="ai-box row gap-8"><div class="spinner"></div><span>The AI is reading the case. This takes about 5 seconds.</span></div>`;

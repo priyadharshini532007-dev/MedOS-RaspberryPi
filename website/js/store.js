@@ -19,7 +19,7 @@ const SPECIALIST_FOR = [["chest pain", "Cardiology"], ["heart", "Cardiology"], [
 
 const DEFAULT_SETTINGS = {
   hospital_name: "City General Hospital", aging_rate: 5, aging_cap: 450, preemption: "emergency", auto_dispatch: true,
-  dur: { critical: 25, high: 15, medium: 10, low: 7 }, ambulance_speed_kmh: 30, pharmacy_prep_min: 4, demo_speed: 10, announce: true,
+  dur: { critical: 25, high: 15, medium: 10, low: 7 }, ml_triage: true, ambulance_speed_kmh: 30, pharmacy_prep_min: 4, demo_speed: 10, announce: true,
   notify_ahead: 2,
 };
 
@@ -147,20 +147,30 @@ function register(data, source = "reception", { arrived = Date.now(), dispatchNo
   const vitals = Object.fromEntries(Object.entries(data.vitals || {}).filter(([, v]) => v !== "" && v != null));
   const age = data.age === "" || data.age == null ? null : parseInt(data.age, 10);
   const r = analyse(data.symptoms || "", age, vitals, !!data.pregnant);
-  let level = r.level, rank = r.rank;
-  if (data.level_override && LEVEL_ORDER[data.level_override] < LEVEL_ORDER[level]) { level = data.level_override; rank = level === "critical" ? 0 : rank; }
+  let level = r.level, rank = r.rank, levelSource = "rules";
+  const reasons = [...r.reasons];
+  if (data.level_override && LEVEL_ORDER[data.level_override] < LEVEL_ORDER[level]) { level = data.level_override; rank = level === "critical" ? 0 : rank; levelSource = "manual"; }
+  // Machine-learning second opinion (ml/train.py): may only RAISE the level, and only when confident.
+  const ml = S.settings.ml_triage !== false && ML.available ? ML.predict(data.symptoms || "", age, vitals, !!data.pregnant) : null;
+  const mlUp = levelSource !== "manual" && !data.emergency ? ML.upgrade(level, ml) : null;
+  if (mlUp) {
+    reasons.push(`ML model: ${LEVEL_LABEL[mlUp]} (${Math.round(ml.confidence * 100)}% confident${ml.topTerms.length ? ', from "' + ml.topTerms.slice(0, 2).join(", ") + '"' : ""}) — raised from ${LEVEL_LABEL[level]}`);
+    level = mlUp; rank = level === "critical" ? 0 : rank; levelSource = "ml";
+  }
   const id = nextId("patient");
   const token = fixedToken || String(nextId("token")).padStart(3, "0");
   const p = {
     id, token, code: randCode(), day: today(), hospitalId, name: (data.name || "").trim() || null, age, sex: data.sex || null, phone: data.phone || null,
     symptoms: (data.symptoms || "").trim(), vitals, pregnant: !!data.pregnant, level, rank, base: baseScore(level, rank, r.bonus),
-    primary: r.primary_condition, conditions: r.conditions, red_flags: r.red_flags, reasons: r.reasons, department: r.department,
+    primary: r.primary_condition, conditions: r.conditions, red_flags: r.red_flags, reasons, department: r.department,
+    rulesLevel: r.level, levelSource, mlLevel: ml ? ml.level : null, mlConfidence: ml ? ml.confidence : null,
     source, emergency: !!data.emergency, preempted: false, status: "waiting", doctorId: null, roomId: null,
     arrived, called: null, completed: null, wait_s: null, consult_s: 0, outcome: null, notes: null, voiceId: data.voiceId || null,
   };
   S.patients.push(p);
   const where = hospitalId === SELF_ID ? "" : ` at ${hospitalById(hospitalId).name}`;
   if (!silent) log("ARRIVE", `Token ${token} via ${source}${where}: ${LEVEL_LABEL[level]} — ${r.primary_condition} (score ${Math.round(p.base)})`, id);
+  if (!silent && ml) log("ML", `Token ${token}: model predicts ${LEVEL_LABEL[ml.level]} (${Math.round(ml.confidence * 100)}%)${mlUp ? " — raised the level from " + LEVEL_LABEL[r.level] : ", rules level kept"}`, id);
   if (data.voiceId) { const v = S.voice.find((x) => x.id === data.voiceId); if (v) { v.patientId = id; v.status = "registered"; } }
   if (dispatchNow && hospitalId === SELF_ID && S.settings.auto_dispatch) dispatch("arrival");
   if (!silent) save("arrival");

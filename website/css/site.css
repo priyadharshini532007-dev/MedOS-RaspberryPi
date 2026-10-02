@@ -518,3 +518,18 @@ dialog.modal::backdrop { background: rgba(15, 23, 42, .5); }
 /* long transcripts scroll inside the voice box instead of filling the phone screen */
 .voice-live { max-height: 9.5em; overflow-y: auto; overscroll-behavior: contain; word-break: break-word; }
 @media (max-width: 480px) { .mic-btn { width: 56px; height: 56px; } .voice-row { gap: 10px; } }
+
+/* machine-learning model opinion */
+.ml-box { border: 1px solid color-mix(in srgb, var(--primary) 30%, var(--border)); background: var(--primary-soft); border-radius: var(--radius-sm); padding: 10px 12px; margin-top: 8px; }
+.ml-title { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; color: var(--primary-soft-text); }
+.ml-title .ico { width: 17px; height: 17px; }
+.ml-bars { display: grid; gap: 4px; margin-top: 8px; }
+.ml-bar { display: grid; grid-template-columns: 64px 1fr 40px; gap: 8px; align-items: center; font-size: 13px; }
+.ml-bar i { height: 8px; border-radius: 99px; background: var(--surface-3); overflow: hidden; display: block; }
+.ml-bar i b { display: block; height: 100%; border-radius: 99px; }
+.ml-bar em { font-style: normal; text-align: right; font-variant-numeric: tabular-nums; color: var(--text-2); }
+
+/* Reception: hospital picker */
+.hosp-pick > span { display: inline-flex; align-items: center; gap: 6px; }
+.hosp-pick > span .ico { width: 16px; height: 16px; }
+.token-chip { white-space: nowrap; }

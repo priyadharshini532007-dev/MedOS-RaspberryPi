@@ -1,0 +1,3149 @@
+{
+"classes": [
+"critical",
+"high",
+"low",
+"medium"
+],
+"rows": [
+{
+"symptoms": "Having runny nose suddenly",
+"age": 50,
+"pregnant": 0,
+"vitals": {
+"temp": 99.7,
+"pulse": 75.0,
+"spo2": 97.0,
+"bp_sys": 112.0
+},
+"proba": [
+0.080933,
+0.009379,
+0.885087,
+0.024601
+]
+},
+{
+"symptoms": "Excruciating pain in the abdomen since night since last night and poor sleep",
+"age": 21,
+"pregnant": 0,
+"vitals": {
+"temp": 99.3,
+"pulse": 98.0,
+"spo2": 96.0,
+"bp_sys": 134.0,
+"pain": 10.0
+},
+"proba": [
+0.097759,
+0.896838,
+0.000834,
+0.004568
+]
+},
+{
+"symptoms": "Patient complains of acidity for one week",
+"age": 24,
+"pregnant": 1,
+"vitals": {
+"temp": 99.1,
+"pulse": 68.0,
+"spo2": 97.0,
+"bp_sys": 126.0
+},
+"proba": [
+0.178515,
+0.062103,
+0.650305,
+0.109077
+]
+},
+{
+"symptoms": "Mild ache in the tummy after food since morning",
+"age": 22,
+"pregnant": 0,
+"vitals": {
+"temp": 97.0,
+"pulse": 80.0,
+"spo2": 97.0,
+"bp_sys": 116.0
+},
+"proba": [
+0.121404,
+0.011114,
+0.79798,
+0.069503
+]
+},
+{
+"symptoms": "Came with burning hot body and shivering since two days since an hour, no breathing difficulty",
+"age": 39,
+"pregnant": 0,
+"vitals": {
+"temp": 102.6,
+"pulse": 79.0,
+"spo2": 96.0,
+"bp_sys": 125.0
+},
+"proba": [
+0.031363,
+0.949073,
+0.011345,
+0.008219
+]
+},
+{
+"symptoms": "Sleep problems",
+"age": 70,
+"pregnant": 0,
+"vitals": {
+"temp": 98.5,
+"pulse": 72.0,
+"spo2": 98.0,
+"bp_sys": 146.0,
+"pain": 4.0
+},
+"proba": [
+0.03411,
+0.021318,
+0.889301,
+0.055271
+]
+},
+{
+"symptoms": "Very hot to touch and rigors at night since yesterday",
+"age": 32,
+"pregnant": 0,
+"vitals": {
+"temp": 103.6,
+"pulse": 98.0,
+"spo2": 96.0,
+"bp_sys": 125.0
+},
+"proba": [
+0.106666,
+0.8832,
+0.003471,
+0.006663
+]
+},
+{
+"symptoms": "Cannot keep even water down for three days and poor sleep",
+"age": 4,
+"pregnant": 0,
+"vitals": {
+"temp": 98.6,
+"pulse": 78.0,
+"spo2": 97.0,
+"bp_sys": 135.0,
+"pain": 6.0
+},
+"proba": [
+0.020561,
+0.028728,
+0.007745,
+0.942967
+]
+},
+{
+"symptoms": "Pain in the leg muscles",
+"age": 70,
+"pregnant": 0,
+"vitals": {
+"temp": 98.2,
+"pulse": 87.0,
+"spo2": 96.0,
+"bp_sys": 138.0,
+"pain": 1.0
+},
+"proba": [
+0.005587,
+0.008545,
+0.982166,
+0.003702
+]
+},
+{
+"symptoms": "My grandmother has used the puffer twice, still a bit tight from evening",
+"age": 16,
+"pregnant": 0,
+"vitals": {},
+"proba": [
+0.026776,
+0.006635,
+0.015405,
+0.951184
+]
+},
+{
+"symptoms": "Runny nose suddenly and not eating well",
+"age": 38,
+"pregnant": 0,
+"vitals": {
+"pain": 2.0
+},
+"proba": [
+0.007052,
+0.004061,
+0.95751,
+0.031376
+]
+},
+{
+"symptoms": "My husband has loose stools since morning since last night",
+"age": 6,
+"pregnant": 0,
+"vitals": {
+"pain": 2.0
+},
+"proba": [
+0.002448,
+0.001254,
+0.952273,
+0.044025
+]
+},
+{
+"symptoms": "Worst headache for two days and poor sleep, no bleeding",
+"age": 75,
+"pregnant": 0,
+"vitals": {
+"temp": 98.3,
+"pulse": 81.0,
+"spo2": 97.0,
+"bp_sys": 117.0,
+"pain": 4.0
+},
+"proba": [
+0.132986,
+0.03465,
+0.090036,
+0.742328
+]
+},
+{
+"symptoms": "Follow up visit for blood pressure from evening, poor sleep",
+"age": 39,
+"pregnant": 0,
+"vitals": {},
+"proba": [
+0.016852,
+0.005752,
+0.947571,
+0.029826
+]
+},
+{
+"symptoms": "Having rash for one week, no fever",
+"age": 26,
+"pregnant": 0,
+"vitals": {
+"temp": 99.9,
+"pulse": 103.0,
+"spo2": 97.0,
+"bp_sys": 126.0,
+"pain": 4.0
+},
+"proba": [
+0.073803,
+0.068726,
+0.778496,
+0.078975
+]
+},
+{
+"symptoms": "Came with chest tight and whistling sound when breathing for two days",
+"age": 49,
+"pregnant": 0,
+"vitals": {},
+"proba": [
+0.029304,
+0.038192,
+0.006987,
+0.925517
+]
+},
+{
+"symptoms": "My son has convulsion since yesterday",
+"age": 19,
+"pregnant": 0,
+"vitals": {
+"temp": 97.3,
+"pulse": 73.0,
+"spo2": 81.0,
+"bp_sys": 143.0
+},
+"proba": [
+0.996346,
+0.000689,
+0.001897,
+0.001068
+]
+},
+{
+"symptoms": "Having came for regular sugar test since an hour",
+"age": 72,
+"pregnant": 0,
+"vitals": {
+"temp": 98.3,
+"pulse": 81.0,
+"spo2": 99.0,
+"bp_sys": 114.0,
+"pain": 5.0
+},
+"proba": [
+0.053827,
+0.015023,
+0.879704,
+0.051445
+]
+},
+{
+"symptoms": "Having cannot move my arm from evening",
+"age": 67,
+"pregnant": 0,
+"vitals": {
+"temp": 99.8,
+"pulse": 91.0,
+"spo2": 96.0,
+"bp_sys": 171.0,
+"pain": 8.0
+},
+"proba": [
+0.124596,
+0.864791,
+0.002137,
+0.008476
+]
+},
+{
+"symptoms": "Having ear ache since an hour",
+"age": 19,
+"pregnant": 0,
+"vitals": {},
+"proba": [
+0.005162,
+0.004382,
+0.978727,
+0.011729
+]
+},
+{
+"symptoms": "Temperature 103 with chills for three days and body pains",
+"age": 22,
+"pregnant": 0,
+"vitals": {
+"temp": 102.4,
+"pulse": 100.0,
+"spo2": 98.0,
+"bp_sys": 116.0,
+"pain": 7.0
+},
+"proba": [
+0.097661,
+0.887426,
+0.011265,
+0.003648
+]
+},
+{
+"symptoms": "Patient complains of feeling feverish since evening since last night",
+"age": 34,
+"pregnant": 0,
+"vitals": {
+"temp": 101.0,
+"pulse": 69.0,
+"spo2": 97.0,
+"bp_sys": 144.0
+},
+"proba": [
+0.033799,
+0.00912,
+0.944755,
+0.012325
+]
+},
+{
+"symptoms": "My grandmother has very high fever since yesterday",
+"age": 64,
+"pregnant": 0,
+"vitals": {},
+"proba": [
+0.064961,
+0.907999,
+0.011521,
+0.015519
+]
+},
+{
+"symptoms": "Patient complains of allergy for one week",
+"age": 42,
+"pregnant": 0,
+"vitals": {
+"temp": 99.2,
+"pulse": 73.0,
+"spo2": 98.0,
+"bp_sys": 99.0
+},
+"proba": [
+0.140965,
+0.013494,
+0.808546,
+0.036995
+]
+},
+{
+"symptoms": "My wife has high fever since an hour",
+"age": 47,
+"pregnant": 0,
+"vitals": {
+"temp": 103.9,
+"pulse": 46.0,
+"spo2": 97.0,
+"bp_sys": 113.0,
+"pain": 10.0
+},
+"proba": [
+0.114092,
+0.854112,
+0.001373,
+0.030424
+]
+},
+{
+"symptoms": "Throwing up everything I eat since yesterday, no fever",
+"age": 35,
+"pregnant": 0,
+"vitals": {
+"temp": 99.0,
+"pulse": 89.0,
+"spo2": 95.0,
+"bp_sys": 134.0
+},
+"proba": [
+0.028995,
+0.021717,
+0.005712,
+0.943576
+]
+},
+{
+"symptoms": "Came with deep cut on the leg bleeding non stop from evening",
+"age": 41,
+"pregnant": 0,
+"vitals": {},
+"proba": [
+0.900847,
+0.028928,
+0.045526,
+0.024699
+]
+},
+{
+"symptoms": "Having abdominal pain since an hour",
+"age": 62,
+"pregnant": 0,
+"vitals": {},
+"proba": [
+0.005397,
+0.321632,
+0.6484,
+0.024571
+]
+},
+{
+"symptoms": "Having eczema for one week",
+"age": 55,
+"pregnant": 0,
+"vitals": {},
+"proba": [
+0.047137,
+0.026802,
+0.881855,
+0.044206
+]
+},
+{
+"symptoms": "Excruciating pain in the abdomen since night",
+"age": 18,
+"pregnant": 0,
+"vitals": {
+"pain": 6.0
+},
+"proba": [
+0.023359,
+0.965076,
+0.003613,
+0.007952
+]
+},
+{
+"symptoms": "Having vomiting diarrhoea for three days",
+"age": 48,
+"pregnant": 0,
+"vitals": {},
+"proba": [
+0.028212,
+0.114649,
+0.109549,
+0.747591
+]
+},
+{
+"symptoms": "Pulsating headache with nausea since morning",
+"age": 44,
+"pregnant": 0,
+"vitals": {
+"pain": 4.0
+},
+"proba": [
+0.005382,
+0.008434,
+0.005107,
+0.981078
+]
+},
+{
+"symptoms": "My son has head is pounding and light hurts the eyes since yesterday",
+"age": 52,
+"pregnant": 0,
+"vitals": {
+"temp": 98.9,
+"pulse": 113.0,
+"spo2": 97.0,
+"bp_sys": 108.0
+},
+"proba": [
+0.181422,
+0.016869,
+0.011617,
+0.790092
+]
+},
+{
+"symptoms": "Having wheezing since last night",
+"age": 30,
+"pregnant": 0,
+"vitals": {
+"temp": 98.8,
+"pulse": 99.0,
+"spo2": 98.0,
+"bp_sys": 121.0
+},
+"proba": [
+0.04881,
+0.017073,
+0.029946,
+0.904171
+]
+},
+{
+"symptoms": "Patient complains of very hot to touch and rigors at night for three days",
+"age": 53,
+"pregnant": 0,
+"vitals": {
+"pain": 5.0
+},
+"proba": [
+0.013173,
+0.965671,
+0.005592,
+0.015563
+]
+},
+{
+"symptoms": "Temperature 103 with chills",
+"age": 46,
+"pregnant": 0,
+"vitals": {
+"temp": 103.7,
+"pulse": 86.0,
+"spo2": 98.0,
+"bp_sys": 148.0
+},
+"proba": [
+0.010112,
+0.985965,
+0.002616,
+0.001308
+]
+},
+{
+"symptoms": "Having need to collect my monthly medicines , no vomiting",
+"age": 22,
+"pregnant": 0,
+"vitals": {
+"temp": 98.0,
+"pulse": 82.0,
+"spo2": 97.0,
+"bp_sys": 107.0
+},
+"proba": [
+0.038499,
+0.005562,
+0.947206,
+0.008734
+]
+},
+{
+"symptoms": "Red patches on the back",
+"age": 9,
+"pregnant": 0,
+"vitals": {
+"temp": 98.5,
+"pulse": 86.0,
+"spo2": 96.0,
+"bp_sys": 121.0
+},
+"proba": [
+0.033393,
+0.006488,
+0.943315,
+0.016804
+]
+},
+{
+"symptoms": "Came with breathing very fast and wheezing badly lips look dark since an hour",
+"age": 37,
+"pregnant": 0,
+"vitals": {
+"temp": 99.2,
+"pulse": 116.0,
+"spo2": 96.0,
+"bp_sys": 125.0
+},
+"proba": [
+0.990359,
+0.003308,
+0.002244,
+0.004089
+]
+},
+{
+"symptoms": "Patient complains of temperature for two days",
+"age": 59,
+"pregnant": 0,
+"vitals": {
+"pain": 3.0
+},
+"proba": [
+0.028249,
+0.047177,
+0.872472,
+0.052101
+]
+},
+{
+"symptoms": "Patient complains of eczema",
+"age": 50,
+"pregnant": 0,
+"vitals": {
+"pain": 1.0
+},
+"proba": [
+0.005187,
+0.002547,
+0.977549,
+0.014717
+]
+},
+{
+"symptoms": "Came with low grade temperature and body pains since last night",
+"age": 61,
+"pregnant": 0,
+"vitals": {},
+"proba": [
+0.008151,
+0.010806,
+0.96279,
+0.018252
+]
+},
+{
+"symptoms": "Feeling feverish since evening for two days",
+"age": 28,
+"pregnant": 0,
+"vitals": {},
+"proba": [
+0.015389,
+0.004149,
+0.97378,
+0.006682
+]
+},
+{
+"symptoms": "Came with throbbing pain on one side of the head with vomiting suddenly",
+"age": 1,
+"pregnant": 0,
+"vitals": {
+"temp": 97.7,
+"pulse": 71.0,
+"spo2": 97.0,
+"bp_sys": 111.0
+},
+"proba": [
+0.015937,
+0.006335,
+0.018022,
+0.959706
+]
+},
+{
+"symptoms": "My daughter has throat irritation and cold since yesterday",
+"age": 69,
+"pregnant": 0,
+"vitals": {
+"temp": 98.6,
+"pulse": 76.0,
+"spo2": 99.0,
+"bp_sys": 114.0
+},
+"proba": [
+0.018324,
+0.010181,
+0.953184,
+0.01831
+]
+},
+{
+"symptoms": "Throat is raw since yesterday",
+"age": 28,
+"pregnant": 0,
+"vitals": {
+"temp": 99.1,
+"pulse": 75.0,
+"spo2": 98.0,
+"bp_sys": 132.0
+},
+"proba": [
+0.008578,
+0.004236,
+0.969624,
+0.017562
+]
+},
+{
+"symptoms": "Stiff back since morning , body pains",
+"age": 51,
+"pregnant": 0,
+"vitals": {
+"temp": 99.6,
+"pulse": 83.0,
+"spo2": 96.0,
+"bp_sys": 121.0
+},
+"proba": [
+0.02628,
+0.0065,
+0.952412,
+0.014809
+]
+},
+{
+"symptoms": "Came for regular sugar test suddenly",
+"age": 42,
+"pregnant": 0,
+"vitals": {
+"temp": 99.6,
+"pulse": 94.0,
+"spo2": 98.0,
+"bp_sys": 135.0
+},
+"proba": [
+0.043117,
+0.008494,
+0.926492,
+0.021898
+]
+},
+{
+"symptoms": "Came with repeated vomiting suddenly",
+"age": 31,
+"pregnant": 0,
+"vitals": {
+"temp": 97.5,
+"pulse": 85.0,
+"spo2": 96.0,
+"bp_sys": 146.0,
+"pain": 8.0
+},
+"proba": [
+0.029825,
+0.067623,
+0.003299,
+0.899253
+]
+},
+{
+"symptoms": "Having drank floor cleaner for two days",
+"age": 27,
+"pregnant": 0,
+"vitals": {},
+"proba": [
+0.937148,
+0.013944,
+0.032365,
+0.016543
+]
+},
+{
+"symptoms": "Came with heard a crack in the wrist and it is swollen from evening",
+"age": 1,
+"pregnant": 0,
+"vitals": {
+"temp": 98.5,
+"pulse": 96.0,
+"spo2": 98.0,
+"bp_sys": 120.0,
+"pain": 9.0
+},
+"proba": [
+0.036273,
+0.961117,
+0.000878,
+0.001731
+]
+},
+{
+"symptoms": "Came with throwing up everything I eat since yesterday from evening",
+"age": 58,
+"pregnant": 0,
+"vitals": {},
+"proba": [
+0.00998,
+0.013663,
+0.004974,
+0.971383
+]
+},
+{
+"symptoms": "My husband has dizziness on standing since yesterday",
+"age": 62,
+"pregnant": 0,
+"vitals": {
+"temp": 97.6,
+"pulse": 64.0,
+"spo2": 96.0,
+"bp_sys": 96.0
+},
+"proba": [
+0.095835,
+0.007895,
+0.838957,
+0.057313
+]
+},
+{
+"symptoms": "Came with asthma for one week",
+"age": 34,
+"pregnant": 0,
+"vitals": {
+"temp": 98.8,
+"pulse": 90.0,
+"spo2": 96.0,
+"bp_sys": 150.0
+},
+"proba": [
+0.038136,
+0.017188,
+0.02308,
+0.921597
+]
+},
+{
+"symptoms": "Blocked nose and mild cough suddenly",
+"age": 31,
+"pregnant": 0,
+"vitals": {
+"temp": 98.4,
+"pulse": 101.0,
+"spo2": 98.0,
+"bp_sys": 133.0
+},
+"proba": [
+0.048466,
+0.012036,
+0.89835,
+0.041148
+]
+},
+{
+"symptoms": "My father has pulsating headache with nausea since morning suddenly",
+"age": 28,
+"pregnant": 0,
+"vitals": {
+"temp": 99.1,
+"pulse": 87.0,
+"spo2": 97.0,
+"bp_sys": 134.0,
+"pain": 7.0
+},
+"proba": [
+0.051593,
+0.099991,
+0.005588,
+0.842827
+]
+},
+{
+"symptoms": "Patient complains of vomited ten times since morning since last night",
+"age": 60,
+"pregnant": 0,
+"vitals": {
+"pain": 7.0
+},
+"proba": [
+0.052486,
+0.039281,
+0.0137,
+0.894532
+]
+},
+{
+"symptoms": "Having breathing very fast and wheezing badly lips look dark for two days",
+"age": 54,
+"pregnant": 0,
+"vitals": {
+"temp": 98.6,
+"pulse": 148.0,
+"spo2": 98.0,
+"bp_sys": 129.0,
+"pain": 10.0
+},
+"proba": [
+0.99665,
+0.002429,
+8e-05,
+0.000841
+]
+},
+{
+"symptoms": "Feeling tired and weak since an hour, not eating well",
+"age": 58,
+"pregnant": 0,
+"vitals": {
+"temp": 99.6,
+"pulse": 90.0,
+"spo2": 97.0,
+"bp_sys": 126.0
+},
+"proba": [
+0.110326,
+0.05786,
+0.781257,
+0.050557
+]
+},
+{
+"symptoms": "My husband has worst headache for three days",
+"age": 56,
+"pregnant": 0,
+"vitals": {
+"temp": 97.7,
+"pulse": 79.0,
+"spo2": 90.0,
+"bp_sys": 125.0,
+"pain": 7.0
+},
+"proba": [
+0.356185,
+0.007191,
+0.007617,
+0.629007
+]
+},
+{
+"symptoms": "Excruciating pain in the abdomen since night, not unconscious",
+"age": 22,
+"pregnant": 0,
+"vitals": {
+"temp": 99.4,
+"pulse": 45.0,
+"spo2": 99.0,
+"bp_sys": 131.0
+},
+"proba": [
+0.015271,
+0.943945,
+0.021748,
+0.019036
+]
+},
+{
+"symptoms": "My husband has feels like an elephant sitting on my chest suddenly",
+"age": 50,
+"pregnant": 0,
+"vitals": {
+"temp": 99.6,
+"pulse": 78.0,
+"spo2": 98.0,
+"bp_sys": 121.0
+},
+"proba": [
+0.95505,
+0.010142,
+0.020695,
+0.014112
+]
+},
+{
+"symptoms": "Fever shivering for two days",
+"age": 42,
+"pregnant": 0,
+"vitals": {
+"temp": 103.4,
+"pulse": 64.0,
+"spo2": 97.0,
+"bp_sys": 133.0
+},
+"proba": [
+0.275213,
+0.681531,
+0.03012,
+0.013136
+]
+},
+{
+"symptoms": "Cough with yellow sputum and fever suddenly and slight headache",
+"age": 50,
+"pregnant": 0,
+"vitals": {
+"temp": 98.0,
+"pulse": 90.0,
+"spo2": 97.0,
+"bp_sys": 99.0
+},
+"proba": [
+0.115512,
+0.054818,
+0.029678,
+0.799992
+]
+},
+{
+"symptoms": "Came with burning with fever since an hour",
+"age": 15,
+"pregnant": 0,
+"vitals": {},
+"proba": [
+0.013324,
+0.959244,
+0.017067,
+0.010365
+]
+},
+{
+"symptoms": "Cold from evening",
+"age": 46,
+"pregnant": 0,
+"vitals": {},
+"proba": [
+0.06938,
+0.022189,
+0.871698,
+0.036734
+]
+},
+{
+"symptoms": "My son has fever touching 104 since yesterday for one week",
+"age": 51,
+"pregnant": 0,
+"vitals": {
+"pain": 9.0
+},
+"proba": [
+0.031078,
+0.965546,
+0.000683,
+0.002693
+]
+},
+{
+"symptoms": "Not feeling well since two days for two days, poor sleep",
+"age": 29,
+"pregnant": 0,
+"vitals": {
+"temp": 98.1,
+"pulse": 88.0,
+"spo2": 98.0,
+"bp_sys": 132.0,
+"pain": 1.0
+},
+"proba": [
+0.002661,
+0.013212,
+0.9408,
+0.043327
+]
+},
+{
+"symptoms": "Having tonsil since yesterday",
+"age": 31,
+"pregnant": 0,
+"vitals": {},
+"proba": [
+0.026502,
+0.021524,
+0.904063,
+0.047911
+]
+},
+{
+"symptoms": "Burnt badly since last night and a little nausea",
+"age": 35,
+"pregnant": 0,
+"vitals": {
+"temp": 97.2,
+"pulse": 77.0,
+"spo2": 97.0,
+"bp_sys": 110.0,
+"pain": 6.0
+},
+"proba": [
+0.955296,
+0.007838,
+0.024829,
+0.012037
+]
+},
+{
+"symptoms": "My grandmother has back ache since yesterday",
+"age": 59,
+"pregnant": 0,
+"vitals": {
+"temp": 98.7,
+"pulse": 66.0,
+"spo2": 98.0,
+"bp_sys": 114.0
+},
+"proba": [
+0.026305,
+0.007412,
+0.939293,
+0.02699
+]
+},
+{
+"symptoms": "Throbbing pain on one side of the head with vomiting and body pains, not unconscious",
+"age": 10,
+"pregnant": 0,
+"vitals": {
+"temp": 99.2,
+"pulse": 80.0,
+"spo2": 99.0,
+"bp_sys": 105.0,
+"pain": 7.0
+},
+"proba": [
+0.026231,
+0.014906,
+0.008483,
+0.95038
+]
+},
+{
+"symptoms": "Fell from the terrace from evening, mild cough",
+"age": 47,
+"pregnant": 0,
+"vitals": {
+"temp": 98.4,
+"pulse": 86.0,
+"spo2": 98.0,
+"bp_sys": 133.0
+},
+"proba": [
+0.923697,
+0.020263,
+0.047432,
+0.008608
+]
+},
+{
+"symptoms": "Follow up visit for blood pressure",
+"age": 24,
+"pregnant": 0,
+"vitals": {
+"temp": 98.5,
+"pulse": 65.0,
+"spo2": 97.0,
+"bp_sys": 161.0
+},
+"proba": [
+0.010046,
+0.005535,
+0.958807,
+0.025613
+]
+},
+{
+"symptoms": "Came with red spots on the arms that itch since an hour",
+"age": 92,
+"pregnant": 0,
+"vitals": {
+"temp": 99.4,
+"pulse": 88.0,
+"spo2": 97.0,
+"bp_sys": 120.0
+},
+"proba": [
+0.036713,
+0.013939,
+0.942207,
+0.007141
+]
+},
+{
+"symptoms": "Slightly warm body and tired since morning and mild cough",
+"age": 27,
+"pregnant": 0,
+"vitals": {
+"temp": 100.5,
+"pulse": 67.0,
+"spo2": 97.0,
+"bp_sys": 111.0
+},
+"proba": [
+0.264219,
+0.009959,
+0.66152,
+0.064303
+]
+},
+{
+"symptoms": "Eczema",
+"age": 1,
+"pregnant": 0,
+"vitals": {
+"temp": 98.3,
+"pulse": 74.0,
+"spo2": 98.0,
+"bp_sys": 108.0
+},
+"proba": [
+0.018424,
+0.002805,
+0.974813,
+0.003958
+]
+},
+{
+"symptoms": "Patient complains of mild ache in the tummy after food since an hour",
+"age": 41,
+"pregnant": 0,
+"vitals": {
+"temp": 99.5,
+"pulse": 94.0,
+"spo2": 97.0,
+"bp_sys": 133.0
+},
+"proba": [
+0.111286,
+0.062222,
+0.712041,
+0.114452
+]
+},
+{
+"symptoms": "Blocked nose and not eating well",
+"age": 18,
+"pregnant": 0,
+"vitals": {
+"pain": 5.0
+},
+"proba": [
+0.011911,
+0.013868,
+0.915784,
+0.058437
+]
+},
+{
+"symptoms": "My daughter has severe abdomen since last night",
+"age": 54,
+"pregnant": 0,
+"vitals": {
+"temp": 99.0,
+"pulse": 85.0,
+"spo2": 98.0,
+"bp_sys": 120.0
+},
+"proba": [
+0.084879,
+0.875653,
+0.014102,
+0.025366
+]
+},
+{
+"symptoms": "Patient complains of severe abdomen for three days",
+"age": 37,
+"pregnant": 0,
+"vitals": {},
+"proba": [
+0.043784,
+0.868853,
+0.023415,
+0.063947
+]
+},
+{
+"symptoms": "Hit by a lorry since last night, feeling tired, no bleeding",
+"age": 31,
+"pregnant": 0,
+"vitals": {
+"temp": 97.9,
+"pulse": 69.0,
+"spo2": 98.0,
+"bp_sys": 133.0
+},
+"proba": [
+0.955493,
+0.003903,
+0.032162,
+0.008441
+]
+},
+{
+"symptoms": "Hives suddenly, feeling tired",
+"age": 73,
+"pregnant": 0,
+"vitals": {
+"temp": 97.7,
+"pulse": 86.0,
+"spo2": 97.0,
+"bp_sys": 120.0
+},
+"proba": [
+0.226937,
+0.025228,
+0.712279,
+0.035557
+]
+},
+{
+"symptoms": "Having got current from the electric line for three days",
+"age": 18,
+"pregnant": 0,
+"vitals": {
+"temp": 98.6,
+"pulse": 81.0,
+"spo2": 83.0,
+"bp_sys": 124.0
+},
+"proba": [
+0.998734,
+0.000272,
+0.000692,
+0.000302
+]
+},
+{
+"symptoms": "Mild ache in the tummy after food for one week, not eating well",
+"age": 57,
+"pregnant": 0,
+"vitals": {
+"temp": 97.6,
+"pulse": 85.0,
+"spo2": 98.0,
+"bp_sys": 124.0
+},
+"proba": [
+0.089078,
+0.013712,
+0.860204,
+0.037006
+]
+},
+{
+"symptoms": "Upset stomach and gas suddenly",
+"age": 14,
+"pregnant": 0,
+"vitals": {
+"pain": 1.0
+},
+"proba": [
+0.002096,
+0.006004,
+0.988442,
+0.003458
+]
+},
+{
+"symptoms": "Child pulling at the ear and crying , feeling tired",
+"age": 12,
+"pregnant": 0,
+"vitals": {
+"temp": 99.4,
+"pulse": 81.0,
+"spo2": 97.0,
+"bp_sys": 149.0,
+"pain": 1.0
+},
+"proba": [
+0.000741,
+0.000944,
+0.991601,
+0.006713
+]
+},
+{
+"symptoms": "Chest pain",
+"age": 81,
+"pregnant": 0,
+"vitals": {
+"temp": 99.0,
+"pulse": 90.0,
+"spo2": 96.0,
+"bp_sys": 128.0,
+"pain": 8.0
+},
+"proba": [
+0.934567,
+0.032971,
+0.007,
+0.025462
+]
+},
+{
+"symptoms": "Patient complains of temperature 103 with chills",
+"age": 25,
+"pregnant": 0,
+"vitals": {
+"pain": 10.0
+},
+"proba": [
+0.034165,
+0.961114,
+0.000895,
+0.003826
+]
+},
+{
+"symptoms": "Patient complains of throbbing pain on one side of the head with vomiting for three days",
+"age": 34,
+"pregnant": 0,
+"vitals": {
+"temp": 99.1,
+"pulse": 87.0,
+"spo2": 96.0,
+"bp_sys": 122.0
+},
+"proba": [
+0.041582,
+0.009229,
+0.026355,
+0.922834
+]
+},
+{
+"symptoms": "Throat irritation and cold",
+"age": 39,
+"pregnant": 0,
+"vitals": {
+"temp": 98.5,
+"pulse": 83.0,
+"spo2": 96.0,
+"bp_sys": 149.0
+},
+"proba": [
+0.012132,
+0.003279,
+0.981926,
+0.002663
+]
+},
+{
+"symptoms": "Vomiting many times suddenly",
+"age": 60,
+"pregnant": 0,
+"vitals": {
+"temp": 100.1,
+"pulse": 90.0,
+"spo2": 98.0,
+"bp_sys": 129.0,
+"pain": 5.0
+},
+"proba": [
+0.011014,
+0.005138,
+0.004252,
+0.979596
+]
+},
+{
+"symptoms": "Having gastric for one week",
+"age": 41,
+"pregnant": 0,
+"vitals": {
+"temp": 98.1,
+"pulse": 99.0,
+"spo2": 99.0,
+"bp_sys": 141.0
+},
+"proba": [
+0.093185,
+0.067246,
+0.757381,
+0.082187
+]
+},
+{
+"symptoms": "Belly pain from evening and slight headache, no bleeding",
+"age": 48,
+"pregnant": 0,
+"vitals": {},
+"proba": [
+0.04727,
+0.12682,
+0.76412,
+0.06179
+]
+},
+{
+"symptoms": "Chest tight and whistling sound when breathing for one week, mild cough",
+"age": 27,
+"pregnant": 0,
+"vitals": {
+"temp": 99.7,
+"pulse": 91.0,
+"spo2": 97.0,
+"bp_sys": 104.0
+},
+"proba": [
+0.107321,
+0.026403,
+0.010445,
+0.855832
+]
+},
+{
+"symptoms": "Temperature 103 with chills",
+"age": 41,
+"pregnant": 0,
+"vitals": {
+"temp": 103.7,
+"pulse": 83.0,
+"spo2": 98.0,
+"bp_sys": 117.0,
+"pain": 9.0
+},
+"proba": [
+0.032307,
+0.966636,
+0.000301,
+0.000756
+]
+},
+{
+"symptoms": "Mild ache in the tummy after food since last night",
+"age": 53,
+"pregnant": 0,
+"vitals": {
+"pain": 4.0
+},
+"proba": [
+0.037979,
+0.015791,
+0.871621,
+0.074608
+]
+},
+{
+"symptoms": "High fever , not eating well",
+"age": 40,
+"pregnant": 0,
+"vitals": {
+"pain": 5.0
+},
+"proba": [
+0.028083,
+0.929862,
+0.01919,
+0.022865
+]
+},
+{
+"symptoms": "Came with throwing up everything I eat since yesterday since morning, no chest pain",
+"age": 85,
+"pregnant": 0,
+"vitals": {},
+"proba": [
+0.013856,
+0.020275,
+0.016897,
+0.948972
+]
+},
+{
+"symptoms": "Having chest tight and whistling sound when breathing since yesterday",
+"age": 49,
+"pregnant": 0,
+"vitals": {},
+"proba": [
+0.00799,
+0.012849,
+0.00239,
+0.976772
+]
+},
+{
+"symptoms": "My mother has chest infection since an hour",
+"age": 48,
+"pregnant": 0,
+"vitals": {
+"temp": 98.9,
+"pulse": 95.0,
+"spo2": 95.0,
+"bp_sys": 138.0
+},
+"proba": [
+0.237045,
+0.168977,
+0.054388,
+0.53959
+]
+},
+{
+"symptoms": "Eczema since yesterday, feeling tired",
+"age": 37,
+"pregnant": 0,
+"vitals": {
+"temp": 98.8,
+"pulse": 96.0,
+"spo2": 95.0,
+"bp_sys": 134.0
+},
+"proba": [
+0.178305,
+0.082227,
+0.684236,
+0.055232
+]
+},
+{
+"symptoms": "Came with asthma from evening",
+"age": 24,
+"pregnant": 0,
+"vitals": {
+"temp": 98.8,
+"pulse": 75.0,
+"spo2": 98.0,
+"bp_sys": 121.0
+},
+"proba": [
+0.051391,
+0.011197,
+0.035594,
+0.901818
+]
+},
+{
+"symptoms": "My husband has nasal congestion since last night",
+"age": 10,
+"pregnant": 0,
+"vitals": {
+"pain": 5.0
+},
+"proba": [
+0.030407,
+0.009984,
+0.902974,
+0.056635
+]
+},
+{
+"symptoms": "Having runny nose for one week",
+"age": 48,
+"pregnant": 0,
+"vitals": {
+"temp": 98.8,
+"pulse": 81.0,
+"spo2": 99.0,
+"bp_sys": 126.0
+},
+"proba": [
+0.029892,
+0.010871,
+0.930926,
+0.028311
+]
+},
+{
+"symptoms": "High fever",
+"age": 6,
+"pregnant": 0,
+"vitals": {
+"temp": 103.1,
+"pulse": 78.0,
+"spo2": 90.0,
+"bp_sys": 130.0
+},
+"proba": [
+0.041542,
+0.95741,
+0.000557,
+0.00049
+]
+},
+{
+"symptoms": "Having dehydrated",
+"age": 58,
+"pregnant": 0,
+"vitals": {},
+"proba": [
+0.051677,
+0.018682,
+0.050357,
+0.879283
+]
+},
+{
+"symptoms": "Patient complains of used the puffer twice, still a bit tight for one week",
+"age": 74,
+"pregnant": 0,
+"vitals": {},
+"proba": [
+0.020298,
+0.005504,
+0.009356,
+0.964842
+]
+},
+{
+"symptoms": "Phlegm, not unconscious",
+"age": 46,
+"pregnant": 0,
+"vitals": {
+"temp": 98.7,
+"pulse": 80.0,
+"spo2": 96.0,
+"bp_sys": 111.0
+},
+"proba": [
+0.361305,
+0.023506,
+0.037432,
+0.577757
+]
+},
+{
+"symptoms": "My wife has excruciating pain in the abdomen since night from evening",
+"age": 88,
+"pregnant": 0,
+"vitals": {
+"pain": 10.0
+},
+"proba": [
+0.13426,
+0.844179,
+0.001901,
+0.01966
+]
+},
+{
+"symptoms": "Back is aching while bending from evening, mild cough",
+"age": 62,
+"pregnant": 0,
+"vitals": {},
+"proba": [
+0.006564,
+0.004456,
+0.98402,
+0.004961
+]
+},
+{
+"symptoms": "Temperature since morning, mild cough",
+"age": 46,
+"pregnant": 0,
+"vitals": {
+"pain": 2.0
+},
+"proba": [
+0.013382,
+0.041899,
+0.865874,
+0.078845
+]
+},
+{
+"symptoms": "My grandmother has cough with yellow sputum and fever suddenly",
+"age": 27,
+"pregnant": 0,
+"vitals": {
+"temp": 98.3,
+"pulse": 86.0,
+"spo2": 98.0,
+"bp_sys": 111.0,
+"pain": 5.0
+},
+"proba": [
+0.068685,
+0.110136,
+0.026149,
+0.79503
+]
+},
+{
+"symptoms": "High fever since yesterday and poor sleep",
+"age": 20,
+"pregnant": 0,
+"vitals": {},
+"proba": [
+0.011119,
+0.955093,
+0.016409,
+0.017378
+]
+},
+{
+"symptoms": "Patient complains of throat irritation and cold from evening",
+"age": 71,
+"pregnant": 0,
+"vitals": {
+"temp": 99.5,
+"pulse": 72.0,
+"spo2": 98.0,
+"bp_sys": 157.0,
+"pain": 4.0
+},
+"proba": [
+0.003073,
+0.005553,
+0.985151,
+0.006224
+]
+},
+{
+"symptoms": "My daughter has severe tummy for two days",
+"age": 45,
+"pregnant": 0,
+"vitals": {
+"temp": 99.0,
+"pulse": 78.0,
+"spo2": 99.0,
+"bp_sys": 120.0
+},
+"proba": [
+0.03356,
+0.909514,
+0.029822,
+0.027105
+]
+},
+{
+"symptoms": "Having passed out from evening",
+"age": 28,
+"pregnant": 1,
+"vitals": {
+"temp": 98.8,
+"pulse": 56.0,
+"spo2": 98.0,
+"bp_sys": 122.0
+},
+"proba": [
+0.955493,
+0.012538,
+0.015443,
+0.016526
+]
+},
+{
+"symptoms": "Patient complains of severe head pain since yesterday",
+"age": 54,
+"pregnant": 0,
+"vitals": {
+"temp": 97.9,
+"pulse": 32.0,
+"spo2": 97.0,
+"bp_sys": 118.0
+},
+"proba": [
+0.003967,
+0.025185,
+0.009241,
+0.961606
+]
+},
+{
+"symptoms": "Cough bringing up green mucus , feeling tired",
+"age": 36,
+"pregnant": 0,
+"vitals": {
+"temp": 98.4,
+"pulse": 92.0,
+"spo2": 96.0,
+"bp_sys": 122.0,
+"pain": 6.0
+},
+"proba": [
+0.095007,
+0.0096,
+0.011809,
+0.883584
+]
+},
+{
+"symptoms": "Tonsil",
+"age": 58,
+"pregnant": 0,
+"vitals": {
+"temp": 97.9,
+"pulse": 104.0,
+"spo2": 99.0,
+"bp_sys": 123.0
+},
+"proba": [
+0.076809,
+0.011938,
+0.886285,
+0.024967
+]
+},
+{
+"symptoms": "Having vomited ten times since morning since yesterday",
+"age": 63,
+"pregnant": 0,
+"vitals": {},
+"proba": [
+0.025032,
+0.033948,
+0.019854,
+0.921166
+]
+},
+{
+"symptoms": "Having can't stop vomiting since an hour",
+"age": 53,
+"pregnant": 0,
+"vitals": {
+"temp": 98.7,
+"pulse": 75.0,
+"spo2": 96.0,
+"bp_sys": 151.0,
+"pain": 4.0
+},
+"proba": [
+0.003163,
+0.003836,
+0.004744,
+0.988257
+]
+},
+{
+"symptoms": "Checkup",
+"age": 18,
+"pregnant": 0,
+"vitals": {},
+"proba": [
+0.038225,
+0.013155,
+0.926837,
+0.021783
+]
+},
+{
+"symptoms": "Excruciating pain in the abdomen since night for three days, not eating well",
+"age": 31,
+"pregnant": 1,
+"vitals": {
+"pain": 10.0
+},
+"proba": [
+0.026969,
+0.961438,
+0.000458,
+0.011135
+]
+},
+{
+"symptoms": "My husband has need to collect my monthly medicines since morning",
+"age": 29,
+"pregnant": 0,
+"vitals": {
+"temp": 97.9,
+"pulse": 80.0,
+"spo2": 98.0,
+"bp_sys": 135.0
+},
+"proba": [
+0.015603,
+0.005169,
+0.970006,
+0.009222
+]
+},
+{
+"symptoms": "Red patches on the back from evening",
+"age": 52,
+"pregnant": 0,
+"vitals": {
+"temp": 98.8,
+"pulse": 78.0,
+"spo2": 97.0,
+"bp_sys": 111.0
+},
+"proba": [
+0.036315,
+0.006847,
+0.938909,
+0.017929
+]
+},
+{
+"symptoms": "Wheezing suddenly",
+"age": 29,
+"pregnant": 0,
+"vitals": {
+"temp": 98.9,
+"pulse": 93.0,
+"spo2": 97.0,
+"bp_sys": 97.0,
+"pain": 6.0
+},
+"proba": [
+0.103885,
+0.007597,
+0.008094,
+0.880424
+]
+},
+{
+"symptoms": "Patient complains of stiff back since morning since yesterday, no breathing difficulty",
+"age": 52,
+"pregnant": 0,
+"vitals": {
+"temp": 98.9,
+"pulse": 94.0,
+"spo2": 96.0,
+"bp_sys": 129.0,
+"pain": 2.0
+},
+"proba": [
+0.008971,
+0.008326,
+0.851691,
+0.131012
+]
+},
+{
+"symptoms": "Broken arm",
+"age": 49,
+"pregnant": 0,
+"vitals": {},
+"proba": [
+0.071773,
+0.921833,
+0.003225,
+0.003169
+]
+},
+{
+"symptoms": "My mother has drank floor cleaner for three days",
+"age": 63,
+"pregnant": 0,
+"vitals": {},
+"proba": [
+0.929937,
+0.020638,
+0.039161,
+0.010264
+]
+},
+{
+"symptoms": "Arm looks deformed after falling from the bike for two days",
+"age": 26,
+"pregnant": 0,
+"vitals": {
+"temp": 99.0,
+"pulse": 73.0,
+"spo2": 97.0,
+"bp_sys": 116.0,
+"pain": 10.0
+},
+"proba": [
+0.083891,
+0.914785,
+0.000217,
+0.001107
+]
+},
+{
+"symptoms": "Worst head pain of my life for three days, mild cough",
+"age": 29,
+"pregnant": 0,
+"vitals": {},
+"proba": [
+0.039032,
+0.016667,
+0.028606,
+0.915695
+]
+},
+{
+"symptoms": "My father has routine since morning",
+"age": 44,
+"pregnant": 0,
+"vitals": {
+"temp": 99.4,
+"pulse": 74.0,
+"spo2": 100.0,
+"bp_sys": 106.0
+},
+"proba": [
+0.085835,
+0.014858,
+0.845857,
+0.05345
+]
+},
+{
+"symptoms": "My son has spine pain since morning",
+"age": 45,
+"pregnant": 0,
+"vitals": {
+"temp": 98.5,
+"pulse": 79.0,
+"spo2": 99.0,
+"bp_sys": 129.0,
+"pain": 3.0
+},
+"proba": [
+0.015834,
+0.008323,
+0.951556,
+0.024287
+]
+},
+{
+"symptoms": "Having loose stools since morning",
+"age": 65,
+"pregnant": 0,
+"vitals": {
+"temp": 99.2,
+"pulse": 76.0,
+"spo2": 97.0,
+"bp_sys": 110.0
+},
+"proba": [
+0.042357,
+0.005868,
+0.881343,
+0.070432
+]
+},
+{
+"symptoms": "Severe headache for one week and body pains",
+"age": 36,
+"pregnant": 0,
+"vitals": {
+"pain": 5.0
+},
+"proba": [
+0.018573,
+0.025911,
+0.007247,
+0.948269
+]
+},
+{
+"symptoms": "Came with bitten by a cobra in the field for one week",
+"age": 44,
+"pregnant": 0,
+"vitals": {
+"temp": 99.1,
+"pulse": 91.0,
+"spo2": 92.0,
+"bp_sys": 127.0,
+"pain": 8.0
+},
+"proba": [
+0.993571,
+0.004293,
+0.000705,
+0.001432
+]
+},
+{
+"symptoms": "My daughter has whole body was shaking and jerking since yesterday",
+"age": 2,
+"pregnant": 0,
+"vitals": {
+"temp": 98.6,
+"pulse": 90.0,
+"spo2": 95.0,
+"bp_sys": 115.0
+},
+"proba": [
+0.976499,
+0.004666,
+0.013779,
+0.005057
+]
+},
+{
+"symptoms": "Used the puffer twice, still a bit tight since last night and not eating well",
+"age": 74,
+"pregnant": 0,
+"vitals": {
+"temp": 98.8,
+"pulse": 86.0,
+"spo2": 98.0,
+"bp_sys": 120.0,
+"pain": 8.0
+},
+"proba": [
+0.123529,
+0.019823,
+0.006306,
+0.850342
+]
+},
+{
+"symptoms": "Patient complains of bp check since an hour",
+"age": 6,
+"pregnant": 0,
+"vitals": {
+"temp": 97.3,
+"pulse": 86.0,
+"spo2": 97.0,
+"bp_sys": 127.0,
+"pain": 3.0
+},
+"proba": [
+0.016303,
+0.01257,
+0.932802,
+0.038324
+]
+},
+{
+"symptoms": "Came with sore throat from evening",
+"age": 41,
+"pregnant": 0,
+"vitals": {},
+"proba": [
+0.070896,
+0.018641,
+0.860319,
+0.050144
+]
+},
+{
+"symptoms": "Mouth twisted to one side suddenly suddenly",
+"age": 8,
+"pregnant": 0,
+"vitals": {},
+"proba": [
+0.964878,
+0.006437,
+0.016585,
+0.0121
+]
+},
+{
+"symptoms": "Head is pounding and light hurts the eyes for one week and mild cough",
+"age": 12,
+"pregnant": 0,
+"vitals": {
+"temp": 98.6,
+"pulse": 90.0,
+"spo2": 97.0,
+"bp_sys": 131.0
+},
+"proba": [
+0.05497,
+0.019259,
+0.009764,
+0.916008
+]
+},
+{
+"symptoms": "Red spots on the arms that itch",
+"age": 65,
+"pregnant": 0,
+"vitals": {
+"temp": 98.8,
+"pulse": 57.0,
+"spo2": 97.0,
+"bp_sys": 107.0
+},
+"proba": [
+0.023644,
+0.003936,
+0.968384,
+0.004036
+]
+},
+{
+"symptoms": "Acute abdomen for one week and not eating well",
+"age": 56,
+"pregnant": 0,
+"vitals": {
+"pain": 10.0
+},
+"proba": [
+0.047352,
+0.938551,
+0.002327,
+0.01177
+]
+},
+{
+"symptoms": "My grandmother has runny nose and sneezing since two days since morning",
+"age": 57,
+"pregnant": 0,
+"vitals": {
+"temp": 97.4,
+"pulse": 73.0,
+"spo2": 99.0,
+"bp_sys": 126.0
+},
+"proba": [
+0.018474,
+0.008037,
+0.928402,
+0.045087
+]
+},
+{
+"symptoms": "Fever touching 104 since yesterday",
+"age": 41,
+"pregnant": 0,
+"vitals": {},
+"proba": [
+0.052313,
+0.939317,
+0.004658,
+0.003712
+]
+},
+{
+"symptoms": "Throat irritation and cold since morning",
+"age": 38,
+"pregnant": 0,
+"vitals": {
+"temp": 98.0,
+"pulse": 100.0,
+"spo2": 97.0,
+"bp_sys": 133.0
+},
+"proba": [
+0.031508,
+0.00235,
+0.962246,
+0.003895
+]
+},
+{
+"symptoms": "Asthma from evening and poor sleep",
+"age": 47,
+"pregnant": 0,
+"vitals": {
+"temp": 98.9,
+"pulse": 81.0,
+"spo2": 96.0,
+"bp_sys": 116.0
+},
+"proba": [
+0.102737,
+0.028219,
+0.064601,
+0.804443
+]
+},
+{
+"symptoms": "Came with very hot to touch and rigors at night since yesterday",
+"age": 10,
+"pregnant": 0,
+"vitals": {},
+"proba": [
+0.014151,
+0.972364,
+0.00394,
+0.009545
+]
+},
+{
+"symptoms": "Having red patches on the back for three days",
+"age": 36,
+"pregnant": 0,
+"vitals": {
+"temp": 98.9,
+"pulse": 79.0,
+"spo2": 98.0,
+"bp_sys": 133.0,
+"pain": 3.0
+},
+"proba": [
+0.008416,
+0.004661,
+0.973451,
+0.013473
+]
+},
+{
+"symptoms": "Having vomiting diarrhea for three days",
+"age": 70,
+"pregnant": 0,
+"vitals": {},
+"proba": [
+0.019064,
+0.071039,
+0.179203,
+0.730694
+]
+},
+{
+"symptoms": "Having back pain since last night",
+"age": 45,
+"pregnant": 0,
+"vitals": {
+"temp": 97.9,
+"pulse": 93.0,
+"spo2": 97.0,
+"bp_sys": 93.0,
+"pain": 4.0
+},
+"proba": [
+0.019705,
+0.005316,
+0.951926,
+0.023053
+]
+},
+{
+"symptoms": "Having chest tight and whistling sound when breathing since last night",
+"age": 52,
+"pregnant": 0,
+"vitals": {
+"temp": 98.4,
+"pulse": 64.0,
+"spo2": 96.0,
+"bp_sys": 116.0
+},
+"proba": [
+0.032222,
+0.013083,
+0.004898,
+0.949797
+]
+},
+{
+"symptoms": "My mother has pain in the leg muscles suddenly",
+"age": 68,
+"pregnant": 0,
+"vitals": {
+"temp": 97.8,
+"pulse": 98.0,
+"spo2": 94.0,
+"bp_sys": 104.0
+},
+"proba": [
+0.29595,
+0.034342,
+0.666181,
+0.003527
+]
+},
+{
+"symptoms": "Chills since yesterday and not eating well",
+"age": 55,
+"pregnant": 0,
+"vitals": {
+"temp": 99.8,
+"pulse": 63.0,
+"spo2": 97.0,
+"bp_sys": 117.0
+},
+"proba": [
+0.164712,
+0.088688,
+0.67811,
+0.06849
+]
+},
+{
+"symptoms": "Chest is burning and left arm feels numb since last night and slight headache, no fever",
+"age": 13,
+"pregnant": 0,
+"vitals": {},
+"proba": [
+0.858441,
+0.048512,
+0.047262,
+0.045785
+]
+},
+{
+"symptoms": "Head is pounding and light hurts the eyes suddenly and slight headache",
+"age": 49,
+"pregnant": 0,
+"vitals": {
+"pain": 5.0
+},
+"proba": [
+0.011872,
+0.015268,
+0.00793,
+0.964929
+]
+},
+{
+"symptoms": "Patient complains of severe abdomen for three days",
+"age": 55,
+"pregnant": 0,
+"vitals": {},
+"proba": [
+0.044053,
+0.872596,
+0.021803,
+0.061548
+]
+},
+{
+"symptoms": "Itching for two days, slight headache, no fever",
+"age": 72,
+"pregnant": 0,
+"vitals": {
+"pain": 2.0
+},
+"proba": [
+0.012784,
+0.016839,
+0.910053,
+0.060324
+]
+},
+{
+"symptoms": "My father has cannot move my leg suddenly",
+"age": 55,
+"pregnant": 0,
+"vitals": {
+"temp": 97.6,
+"pulse": 67.0,
+"spo2": 96.0,
+"bp_sys": 151.0,
+"pain": 8.0
+},
+"proba": [
+0.11003,
+0.87448,
+0.003423,
+0.012067
+]
+},
+{
+"symptoms": "My mother has black tarry stools and feeling faint since yesterday",
+"age": 43,
+"pregnant": 0,
+"vitals": {},
+"proba": [
+0.808679,
+0.036662,
+0.119376,
+0.035284
+]
+},
+{
+"symptoms": "My neighbour has wheezing for one week",
+"age": 92,
+"pregnant": 0,
+"vitals": {},
+"proba": [
+0.049363,
+0.026847,
+0.072703,
+0.851087
+]
+},
+{
+"symptoms": "Patient complains of throat irritation and cold since yesterday",
+"age": 51,
+"pregnant": 0,
+"vitals": {},
+"proba": [
+0.012607,
+0.004588,
+0.97572,
+0.007085
+]
+},
+{
+"symptoms": "Bleeding heavily from evening and slight headache",
+"age": 17,
+"pregnant": 0,
+"vitals": {
+"temp": 98.7,
+"pulse": 33.0,
+"spo2": 97.0,
+"bp_sys": 132.0
+},
+"proba": [
+0.271294,
+0.132712,
+0.420223,
+0.175771
+]
+},
+{
+"symptoms": "Came with ear is aching for one week",
+"age": 30,
+"pregnant": 0,
+"vitals": {
+"pain": 2.0
+},
+"proba": [
+0.00159,
+0.002609,
+0.965506,
+0.030295
+]
+},
+{
+"symptoms": "Difficulty swallowing",
+"age": 44,
+"pregnant": 0,
+"vitals": {
+"pain": 5.0
+},
+"proba": [
+0.022707,
+0.009759,
+0.949147,
+0.018387
+]
+},
+{
+"symptoms": "Child pulling at the ear and crying since morning and body pains",
+"age": 49,
+"pregnant": 0,
+"vitals": {
+"temp": 98.5,
+"pulse": 75.0,
+"spo2": 99.0,
+"bp_sys": 154.0
+},
+"proba": [
+0.007668,
+0.021302,
+0.90996,
+0.06107
+]
+},
+{
+"symptoms": "Came with chest pressure suddenly, no breathing difficulty",
+"age": 20,
+"pregnant": 0,
+"vitals": {},
+"proba": [
+0.301948,
+0.089251,
+0.260067,
+0.348735
+]
+},
+{
+"symptoms": "My grandmother has vomited ten times since morning since an hour",
+"age": 88,
+"pregnant": 0,
+"vitals": {},
+"proba": [
+0.033039,
+0.140025,
+0.039396,
+0.78754
+]
+},
+{
+"symptoms": "Lower back suddenly and not eating well",
+"age": 11,
+"pregnant": 0,
+"vitals": {
+"pain": 5.0
+},
+"proba": [
+0.031152,
+0.021397,
+0.886798,
+0.060654
+]
+},
+{
+"symptoms": "My husband has eyes rolled up and became limp for two days",
+"age": 53,
+"pregnant": 0,
+"vitals": {
+"temp": 99.6,
+"pulse": 97.0,
+"spo2": 98.0,
+"bp_sys": 197.0
+},
+"proba": [
+0.620872,
+0.134019,
+0.155132,
+0.089977
+]
+},
+{
+"symptoms": "Chesty cough for a week for two days, mild cough, no chest pain",
+"age": 49,
+"pregnant": 0,
+"vitals": {
+"temp": 99.1,
+"pulse": 72.0,
+"spo2": 97.0,
+"bp_sys": 131.0,
+"pain": 8.0
+},
+"proba": [
+0.129947,
+0.076705,
+0.009963,
+0.783385
+]
+},
+{
+"symptoms": "Patient complains of body ache from evening",
+"age": 46,
+"pregnant": 0,
+"vitals": {
+"temp": 100.1,
+"pulse": 95.0,
+"spo2": 95.0,
+"bp_sys": 116.0
+},
+"proba": [
+0.128015,
+0.009074,
+0.844509,
+0.018402
+]
+},
+{
+"symptoms": "Having tummy ache suddenly",
+"age": 84,
+"pregnant": 0,
+"vitals": {
+"pain": 2.0
+},
+"proba": [
+0.004714,
+0.010406,
+0.966202,
+0.018678
+]
+},
+{
+"symptoms": "Dislocated shoulder",
+"age": 30,
+"pregnant": 0,
+"vitals": {
+"temp": 98.5,
+"pulse": 87.0,
+"spo2": 96.0,
+"bp_sys": 81.0
+},
+"proba": [
+0.207374,
+0.759938,
+0.023531,
+0.009157
+]
+},
+{
+"symptoms": "Having used the puffer twice, still a bit tight since last night",
+"age": 42,
+"pregnant": 0,
+"vitals": {
+"temp": 98.7,
+"pulse": 138.0,
+"spo2": 96.0,
+"bp_sys": 140.0,
+"pain": 7.0
+},
+"proba": [
+0.202022,
+0.011744,
+0.003484,
+0.78275
+]
+},
+{
+"symptoms": "Having indigestion since morning",
+"age": 3,
+"pregnant": 0,
+"vitals": {
+"temp": 98.7,
+"pulse": 69.0,
+"spo2": 97.0,
+"bp_sys": 126.0
+},
+"proba": [
+0.041714,
+0.057947,
+0.862152,
+0.038187
+]
+},
+{
+"symptoms": "Came with pain in the lower spine after lifting since last night",
+"age": 28,
+"pregnant": 0,
+"vitals": {
+"temp": 98.2,
+"pulse": 86.0,
+"spo2": 99.0,
+"bp_sys": 102.0
+},
+"proba": [
+0.027879,
+0.014583,
+0.935769,
+0.021769
+]
+},
+{
+"symptoms": "Throat irritation and cold for three days and slight headache",
+"age": 43,
+"pregnant": 0,
+"vitals": {},
+"proba": [
+0.006105,
+0.0037,
+0.985035,
+0.00516
+]
+},
+{
+"symptoms": "Scratchy throat and painful to swallow",
+"age": 33,
+"pregnant": 0,
+"vitals": {
+"temp": 99.4,
+"pulse": 79.0,
+"spo2": 97.0,
+"bp_sys": 137.0
+},
+"proba": [
+0.018717,
+0.003943,
+0.973968,
+0.003371
+]
+},
+{
+"symptoms": "Came with fever touching 104 since yesterday for one week",
+"age": 66,
+"pregnant": 0,
+"vitals": {
+"temp": 103.2,
+"pulse": 96.0,
+"spo2": 95.0,
+"bp_sys": 129.0
+},
+"proba": [
+0.113255,
+0.880765,
+0.00401,
+0.00197
+]
+},
+{
+"symptoms": "Abdominal pain",
+"age": 38,
+"pregnant": 0,
+"vitals": {
+"temp": 99.3,
+"pulse": 84.0,
+"spo2": 96.0,
+"bp_sys": 140.0
+},
+"proba": [
+0.02572,
+0.268551,
+0.693182,
+0.012547
+]
+},
+{
+"symptoms": "Came with very hot to touch and rigors at night for three days",
+"age": 65,
+"pregnant": 0,
+"vitals": {
+"temp": 103.6,
+"pulse": 81.0,
+"spo2": 99.0,
+"bp_sys": 152.0,
+"pain": 9.0
+},
+"proba": [
+0.005841,
+0.991753,
+0.000213,
+0.002193
+]
+},
+{
+"symptoms": "Came with skin peeled off after boiling water spilled for one week, no breathing difficulty",
+"age": 52,
+"pregnant": 0,
+"vitals": {
+"temp": 98.8,
+"pulse": 106.0,
+"spo2": 97.0,
+"bp_sys": 127.0
+},
+"proba": [
+0.919573,
+0.022218,
+0.036939,
+0.02127
+]
+},
+{
+"symptoms": "My son has chesty cough for a week",
+"age": 54,
+"pregnant": 0,
+"vitals": {
+"temp": 99.2,
+"pulse": 74.0,
+"spo2": 86.0,
+"bp_sys": 133.0,
+"pain": 5.0
+},
+"proba": [
+0.309333,
+0.017348,
+0.008884,
+0.664434
+]
+},
+{
+"symptoms": "Patient complains of ear is aching since morning",
+"age": 6,
+"pregnant": 0,
+"vitals": {
+"pain": 1.0
+},
+"proba": [
+0.002318,
+0.000956,
+0.953924,
+0.042803
+]
+},
+{
+"symptoms": "My son has slurred speech for two days",
+"age": 31,
+"pregnant": 0,
+"vitals": {},
+"proba": [
+0.847645,
+0.021385,
+0.095048,
+0.035922
+]
+},
+{
+"symptoms": "Having child pulling at the ear and crying suddenly",
+"age": 11,
+"pregnant": 0,
+"vitals": {
+"pain": 5.0
+},
+"proba": [
+0.010789,
+0.012759,
+0.938914,
+0.037539
+]
+},
+{
+"symptoms": "Came with cannot move my leg suddenly",
+"age": 74,
+"pregnant": 0,
+"vitals": {
+"temp": 98.2,
+"pulse": 93.0,
+"spo2": 96.0,
+"bp_sys": 130.0
+},
+"proba": [
+0.061297,
+0.925777,
+0.008742,
+0.004183
+]
+},
+{
+"symptoms": "Having found lying on the floor not answering for two days",
+"age": 16,
+"pregnant": 0,
+"vitals": {
+"temp": 98.7,
+"pulse": 97.0,
+"spo2": 86.0,
+"bp_sys": 131.0,
+"pain": 9.0
+},
+"proba": [
+0.996024,
+0.003644,
+8.8e-05,
+0.000243
+]
+},
+{
+"symptoms": "Having rash since last night, not unconscious",
+"age": 28,
+"pregnant": 1,
+"vitals": {
+"temp": 98.6,
+"pulse": 91.0,
+"spo2": 99.0,
+"bp_sys": 117.0
+},
+"proba": [
+0.150135,
+0.063333,
+0.726949,
+0.059583
+]
+},
+{
+"symptoms": "My grandmother has vomiting diarrhea for one week",
+"age": 62,
+"pregnant": 0,
+"vitals": {
+"temp": 98.9,
+"pulse": 82.0,
+"spo2": 98.0,
+"bp_sys": 96.0
+},
+"proba": [
+0.091041,
+0.032514,
+0.161022,
+0.715424
+]
+},
+{
+"symptoms": "Pneumonia from evening",
+"age": 62,
+"pregnant": 0,
+"vitals": {
+"temp": 98.2,
+"pulse": 71.0,
+"spo2": 96.0,
+"bp_sys": 137.0
+},
+"proba": [
+0.069721,
+0.019215,
+0.044832,
+0.866232
+]
+},
+{
+"symptoms": "Came with scratchy throat and painful to swallow",
+"age": 33,
+"pregnant": 0,
+"vitals": {
+"pain": 1.0
+},
+"proba": [
+0.00127,
+0.000681,
+0.995948,
+0.0021
+]
+},
+{
+"symptoms": "Very high fever",
+"age": 61,
+"pregnant": 0,
+"vitals": {
+"temp": 103.7,
+"pulse": 80.0,
+"spo2": 98.0,
+"bp_sys": 122.0
+},
+"proba": [
+0.080603,
+0.917475,
+0.000744,
+0.001177
+]
+},
+{
+"symptoms": "Arm looks deformed after falling from the bike",
+"age": 41,
+"pregnant": 0,
+"vitals": {
+"temp": 98.3,
+"pulse": 74.0,
+"spo2": 99.0,
+"bp_sys": 127.0,
+"pain": 7.0
+},
+"proba": [
+0.030676,
+0.967147,
+0.000664,
+0.001513
+]
+},
+{
+"symptoms": "My daughter has not feeling well since two days for three days",
+"age": 27,
+"pregnant": 0,
+"vitals": {
+"temp": 99.0,
+"pulse": 87.0,
+"spo2": 97.0,
+"bp_sys": 140.0,
+"pain": 5.0
+},
+"proba": [
+0.02898,
+0.186151,
+0.571614,
+0.213254
+]
+},
+{
+"symptoms": "Patient complains of bike crash on the highway for one week",
+"age": 76,
+"pregnant": 0,
+"vitals": {
+"temp": 98.2,
+"pulse": 47.0,
+"spo2": 97.0,
+"bp_sys": 114.0,
+"pain": 8.0
+},
+"proba": [
+0.967651,
+0.018787,
+0.003678,
+0.009884
+]
+},
+{
+"symptoms": "Came with chest tightness since morning",
+"age": 56,
+"pregnant": 0,
+"vitals": {
+"pain": 6.0
+},
+"proba": [
+0.912987,
+0.022372,
+0.016409,
+0.048232
+]
+}
+]
+}

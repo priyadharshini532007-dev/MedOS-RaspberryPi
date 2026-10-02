@@ -303,6 +303,8 @@ async function loadAi(force = false) {
       <div class="field span-2"><label for="llm-model">Model</label><select class="select" id="llm-model" data-s="llm_model">${models.map((m) => `<option ${m === s.llm_model ? "selected" : ""}>${esc(m)}</option>`).join("")}</select></div>
     </div>
     <label class="switch"><input type="checkbox" data-s="ai_triage" ${s.ai_triage ? "checked" : ""}><span class="track"></span><span class="sw-text"><b>Second opinion for every new patient</b><span>Runs in the background and can only raise a priority</span></span></label>
+    <label class="switch"><input type="checkbox" data-s="ml_triage" ${s.ml_triage ? "checked" : ""}><span class="track"></span><span class="sw-text"><b>Machine-learning priority model</b><span>Trained model checks every registration; it can only raise a priority, and only when 75% confident</span></span></label>
+    <div id="ml-info"></div>
     ${llm.error ? `<p class="error-text">${esc(llm.error)}</p>` : ""}
     <div class="mini-stats">
       <div><span>Requests</span><b>${llm.calls}</b></div><div><span>Failed</span><b>${llm.failures}</b></div>
@@ -310,6 +312,16 @@ async function loadAi(force = false) {
     </div>
     <div class="row wrap gap-8"><button class="btn" type="button" id="llm-test">${icon("send")}Test connection</button><button class="btn" type="button" id="llm-find">${icon("wifi")}Find on network</button></div>
     <div id="llm-found"></div>`;
+  api("ml/info").then((ml) => {
+    const box = $("#ml-info"); if (!box) return;
+    if (!ml.available) { box.innerHTML = `<p class="t-small muted">No ML model found. Train it with <code>python ml/train.py</code>.</p>`; return; }
+    const m = ml.metrics, pct = (x) => (x * 100).toFixed(1) + "%";
+    box.innerHTML = `<div class="mini-stats">
+        <div><span>Model accuracy</span><b>${pct(m.accuracy)}</b></div><div><span>Rules alone</span><b>${pct(m.rules_accuracy)}</b></div>
+        <div><span>Rules + model</span><b>${pct(m.combined_accuracy)}</b></div><div><span>Critical recall</span><b>${pct(m.critical_recall)}</b></div>
+      </div>
+      <p class="t-small muted">Logistic regression on ${ml.features.toLocaleString()} features, tested on ${m.test_rows.toLocaleString()} held-out rows of the synthetic dataset (ml/data). Synthetic data: shows the method works, not clinical validation. Full report: ml/reports/metrics.md.</p>`;
+  }).catch(() => {});
   $("#llm-test").onclick = async (e) => {
     e.currentTarget.disabled = true;
     try { const r = await api("llm/test", { method: "POST" }); toast(`The AI replied in ${r.latency} s: “${r.reply}”`); loadAi(true); } catch (err) { toastError(err); loadAi(true); }

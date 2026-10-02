@@ -85,7 +85,8 @@ PAGES.reception = {
         <div class="stack">
           <section class="card">
             <div class="card-head"><h2 class="t-h3">${icon("list")}Waiting queue</h2><span class="t-small muted" id="qsum"></span></div>
-            <div class="card-body" style="padding-bottom:0"><div class="seg seg-sm" id="hfilter" role="group" aria-label="Hospital"></div></div>
+            <div class="card-body" style="padding-bottom:0"><label class="field hosp-pick"><span>${icon("hospital")}Reception for</span>
+              <select class="select" id="hfilter" aria-label="Show the waiting queue of"></select></label></div>
             <div class="qlist" id="queue"></div>
           </section>
           <section class="card hidden" id="amb-card">
@@ -119,7 +120,8 @@ PAGES.reception = {
       $("#preview", el).innerHTML = `<div class="why" style="border-color:${LEVEL_COLOR[t.level]}"><div class="row-between"><b>${esc(t.primary_condition)}</b><span class="t-small muted">score ${Math.round(t.base_score)} · ${esc(t.department)}</span></div>
         <div class="quote" style="margin:6px 0">${highlightSymptoms(d.symptoms, t.spans)}</div>
         <ul style="margin:0;padding-left:18px" class="t-small">${t.reasons.map((r) => `<li>${esc(r)}</li>`).join("")}</ul>
-        <div class="t-small muted" style="margin-top:4px">Would join at position ${ahead + 1} · ${LEVEL_TARGET[t.level]}</div></div>`;
+        <div class="t-small muted" style="margin-top:4px">Would join at position ${ahead + 1} · ${LEVEL_TARGET[t.level]}</div></div>
+        ${mlPanel(ML.predict(d.symptoms, d.age, vit, d.pregnant), t.level)}`;
     }
     form.addEventListener("input", debounce(preview, 200));
     $("#clr", el).addEventListener("click", () => { form.reset(); voiceId = null; preview(); });
@@ -140,9 +142,8 @@ PAGES.reception = {
     let hfilter = store("medos.reception.hospital") || "all";
     const known = new Set(S.patients.filter((p) => p.status === "waiting").map((p) => p.id));
     const fresh = new Set();
-    $("#hfilter", el).addEventListener("click", (e) => {
-      const b = e.target.closest("button"); if (!b) return;
-      hfilter = b.dataset.h; store("medos.reception.hospital", hfilter); draw();
+    $("#hfilter", el).addEventListener("change", (e) => {
+      hfilter = e.target.value; store("medos.reception.hospital", hfilter); draw();
     });
     const draw = () => {
       const all = waitingAll(), eta = etaAll(all);
@@ -152,18 +153,21 @@ PAGES.reception = {
         if (p.source === "online booking") {
           const h = hospitalById(hospOf(p));
           softPing();
-          toast(`New online booking: Token ${p.token} · ${p.name || "Patient"} · ${LEVEL_LABEL[p.level]} · ${h.short}`, p.level === "critical" ? "error" : "ok", 6000);
+          toast(`New online booking: Token ${p.token} · ${p.name || "Patient"} · ${LEVEL_LABEL[p.level]} → ${h.name} queue`, p.level === "critical" ? "error" : "ok", 6000);
         }
       });
       const counts = {};
       all.forEach((p) => (counts[hospOf(p)] = (counts[hospOf(p)] || 0) + 1));
-      const hs = HOSPITALS.filter((h) => h.self || counts[h.id]);
-      if (hfilter !== "all" && !hs.some((h) => String(h.id) === hfilter)) hfilter = "all";
-      $("#hfilter", el).innerHTML = `<button type="button" data-h="all" aria-pressed="${hfilter === "all"}">All hospitals · ${all.length}</button>` +
-        hs.map((h) => `<button type="button" data-h="${h.id}" aria-pressed="${hfilter === String(h.id)}">${esc(h.short)} · ${counts[h.id] || 0}</button>`).join("");
+      // Every hospital is listed, each with its own waiting count; the queue below shows the chosen one.
+      if (hfilter !== "all" && !hospitalById(+hfilter)) hfilter = "all";
+      const sel = $("#hfilter", el);
+      const opts = `<option value="all">All hospitals — ${all.length} waiting</option>` +
+        HOSPITALS.map((h) => `<option value="${h.id}">${esc(h.name)} — ${counts[h.id] || 0} waiting</option>`).join("");
+      if (sel.dataset.html !== opts) { sel.innerHTML = opts; sel.dataset.html = opts; }
+      sel.value = hfilter;
       let q = hfilter === "all" ? all : all.filter((p) => String(hospOf(p)) === hfilter);
       if (hfilter !== "all") q = q.map((p) => ({ ...p, position: p.hospPosition }));
-      $("#qsum", el).textContent = `${q.length} waiting · ${LEVELS.map((l) => `${q.filter((p) => p.level === l).length} ${LEVEL_LABEL[l].toLowerCase()}`).join(" · ")}`;
+      $("#qsum", el).textContent = `${hfilter === "all" ? "All hospitals" : hospitalById(+hfilter).short} · ${q.length} waiting · ${LEVELS.map((l) => `${q.filter((p) => p.level === l).length} ${LEVEL_LABEL[l].toLowerCase()}`).join(" · ")}`;
       $("#queue", el).innerHTML = queueRows(q, eta, { actions: true, showHosp: true, fresh });
       // Ambulances on their way to any hospital
       const amb = S.ambRequests.filter((r) => r.status === "waiting" || r.status === "dispatched");

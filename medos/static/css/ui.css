@@ -500,3 +500,13 @@ details.disclose > .disclose-body { padding: 0 14px 14px; }
   .slip .s-qr { width: 30mm; height: 30mm; margin: 3mm auto 1mm; }
   .slip .s-f { font-size: 8.5pt; text-align: center; }
 }
+
+/* machine-learning model opinion (reception) */
+.ml-box { border: 1px solid color-mix(in srgb, var(--primary) 30%, var(--border)); background: var(--primary-soft); border-radius: var(--radius-sm); padding: 12px 14px; }
+.ml-box .ml-title { display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--primary-soft-text); }
+.ml-box .ml-title svg { width: 18px; height: 18px; }
+.ml-bars { display: grid; gap: 4px; margin-top: 8px; }
+.ml-bar { display: grid; grid-template-columns: 64px 1fr 40px; gap: 8px; align-items: center; font-size: 13px; }
+.ml-bar i { height: 8px; border-radius: 99px; background: var(--surface-3); overflow: hidden; display: block; }
+.ml-bar i b { display: block; height: 100%; border-radius: 99px; }
+.ml-bar em { font-style: normal; text-align: right; font-variant-numeric: tabular-nums; color: var(--text-2); }

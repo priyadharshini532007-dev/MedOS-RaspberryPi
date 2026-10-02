@@ -175,12 +175,23 @@ PAGES.patient = {
                 <label class="field c3"><span>Department</span><select class="select" name="dept"><option value="">Suggested by triage</option>${DEPARTMENTS.filter((d) => d !== "Emergency").map((d) => `<option>${d}</option>`).join("")}</select></label>
                 <label class="check c6"><input type="checkbox" name="pregnant"> Pregnant</label>
               </form>
+              <div id="ml-note"></div>
               <div id="crit-note"></div>
             </div>
           </section>
           ${locationCard("2 · Where are you starting from?")}
+          <section class="card" id="choose-card">
+            <div class="card-head"><h2 class="t-h3">${icon("hospital")}3 · Choose your hospital</h2><span class="pill brand hidden" id="choose-badge">${icon("crown")}Best pick selected</span></div>
+            <div class="card-body stack-sm">
+              <p class="t-small muted" id="choose-hint">Enter the symptoms above and the hospitals that can see you appear here, fastest first.</p>
+              <label class="field hidden" id="choose-field"><span>Hospital</span>
+                <select class="select" id="hsel" aria-describedby="hsel-info"></select>
+                <small id="hsel-info"></small></label>
+              <button class="btn primary lg block hidden" id="book2" type="button">${icon("ticket")}Book token</button>
+            </div>
+          </section>
           <section class="card">
-            <div class="card-head"><h2 class="t-h3">${icon("crown")}3 · Recommended hospitals</h2><span class="t-small muted" id="rsum"></span></div>
+            <div class="card-head"><h2 class="t-h3">${icon("crown")}4 · Compare all hospitals</h2><span class="t-small muted" id="rsum"></span></div>
             <div class="card-body stack-sm">
               <div class="legend"><span><i style="background:var(--seg-travel)"></i>Travel</span><span><i style="background:var(--seg-wait)"></i>Waiting at the hospital</span><span><i style="background:var(--seg-consult)"></i>Consultation</span></div>
               <div id="why"></div>
@@ -240,6 +251,7 @@ PAGES.patient = {
       store("medos.patient.draft", { ...d, dept: form.dept.value });
       const t = analyse(d.symptoms, d.age, {}, d.pregnant);
       $("#tri", el).innerHTML = d.symptoms ? `${prio(t.level)} <span class="t-small muted">${esc(t.department)}</span>` : "";
+      $("#ml-note", el).innerHTML = d.symptoms ? mlPanel(ML.predict(d.symptoms, d.age, {}, d.pregnant), t.level, { compact: true }) : "";
       $("#crit-note", el).innerHTML = d.symptoms && t.level === "critical"
         ? `<div class="notice bad">${icon("siren")}<div><b>This sounds like an emergency (${esc(t.primary_condition)}).</b> Don't travel on your own — <a href="#/patient/ambulance" data-to-amb>book an ambulance</a> or call 108.</div></div>` : "";
       rec = recommendToken(d, ORIGIN, travel);
@@ -282,12 +294,42 @@ PAGES.patient = {
       const sel = rows.find((r) => r.id === selected);
       $("#book", el).disabled = !sel || !sel.eligible;
       $("#book", el).innerHTML = sel ? `${icon("ticket")}Book token at ${esc(sel.h.short)} · ${fmtMin(sel.total)}` : `${icon("ticket")}Book token`;
+      renderChooser(sel);
       $("#sel-card", el).innerHTML = sel && sel.eligible ? `<div class="card card-pad stack-sm" style="padding:12px 14px">
           <div class="row-between"><b>${esc(sel.h.short)}</b>${sel === rec.best ? `<span class="pill brand">${icon("crown")}Fastest</span>` : ""}</div>
           <div class="t-small muted">${sel.travelMin} min drive · ${sel.wait} min queue · ${Math.round(sel.consult)} min consult</div>
           <a class="btn sm" href="${Maps.googleMapsLink(ORIGIN, sel.h)}" target="_blank" rel="noopener">${icon("nav")}Open in Google Maps</a></div>` : "";
     }
     const select = (id) => { selected = id; picked = true; renderList(); renderMap(true); };
+
+    // Step 3: the hospital dropdown, shown once the symptoms are entered. Fastest first; hospitals that
+    // can't see the patient right now are listed but disabled. It stays in step with the cards and map.
+    let chooserHtml = "";
+    function renderChooser(sel) {
+      const ready = !!form.symptoms.value.trim();
+      $("#choose-hint", el).classList.toggle("hidden", ready);
+      $("#choose-field", el).classList.toggle("hidden", !ready);
+      $("#book2", el).classList.toggle("hidden", !ready);
+      if (!ready) { $("#choose-badge", el).classList.add("hidden"); return; }
+      const html = rec.rows.map((r, i) => {
+        const free = r.availableNow;
+        const label = r.eligible
+          ? `${r === rec.best ? "★ " : `${i + 1}. `}${r.h.name} — ${fmtMin(r.total)} to prescription · ${free} doctor${free === 1 ? "" : "s"} free${r === rec.best ? " (recommended)" : ""}`
+          : `${r.h.name} — ${r.reason}`;
+        return `<option value="${r.id}" ${r.eligible ? "" : "disabled"}>${esc(label)}</option>`;
+      }).join("");
+      const sx = $("#hsel", el);
+      if (html !== chooserHtml) { sx.innerHTML = html; chooserHtml = html; }   // don't rebuild an open list needlessly
+      if (sel) sx.value = String(sel.id);
+      $("#choose-badge", el).classList.toggle("hidden", !(sel && sel === rec.best));
+      $("#hsel-info", el).innerHTML = sel && sel.eligible
+        ? `${esc(sel.h.area)} · ${sel.travelMin} min to get there · ${sel.ahead} ahead of you · ${sel.onDuty} ${esc(rec.dept)} / general doctor${sel.onDuty === 1 ? "" : "s"} on duty${sel.specialist ? "" : " (no specialist)"}`
+        : "";
+      const b2 = $("#book2", el);
+      b2.disabled = !sel || !sel.eligible;
+      b2.innerHTML = sel ? `${icon("ticket")}Book token at ${esc(sel.h.short)} · ${fmtMin(sel.total)}` : `${icon("ticket")}Book token`;
+    }
+    $("#hsel", el).addEventListener("change", (e) => select(+e.target.value));
     $("#hlist", el).addEventListener("click", (e) => { const c = e.target.closest("[data-id]"); if (c) select(+c.dataset.id); });
     $("#hlist", el).addEventListener("keydown", (e) => { const c = e.target.closest("[data-id]"); if (c && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); select(+c.dataset.id); } });
     $("#why", el).addEventListener("click", (e) => { const a = e.target.closest("[data-pick]"); if (a) { e.preventDefault(); select(+a.dataset.pick); } });
@@ -312,11 +354,12 @@ PAGES.patient = {
     }
 
     form.addEventListener("input", debounce(() => update(true), 350));
-    $("#book", el).addEventListener("click", async () => {
+    const doBook = async () => {
       const d = data();
       if (!d.symptoms) { form.symptoms.focus(); return toast("Describe your symptoms first", "warn"); }
       if (!d.name) { form.name.focus(); return toast("Add the patient's name", "warn"); }
       const r = rec.rows.find((x) => x.id === selected);
+      if (!r || !r.eligible) return toast("Choose a hospital from the list first", "warn");
       const ok = await modal({ title: "Confirm your token", body: `
         <div class="row-between"><div><div class="t-h3">${esc(r.h.name)}</div><div class="t-small muted">${esc(r.h.area)} · ${esc(rec.dept)}</div></div>${prio(rec.triage.level)}</div>
         ${raceBar([{ cls: "tr", v: r.travelMin, label: "Travel" }, { cls: "wt", v: r.onsiteWait, label: "Waiting" }, { cls: "cs", v: r.consult, label: "Consultation" }], r.travelMin + r.onsiteWait + r.consult)}
@@ -327,8 +370,11 @@ PAGES.patient = {
       const b = bookToken({ ...d, voiceId }, r, { lat: ORIGIN.lat, lng: ORIGIN.lng, label: ORIGIN.label });
       store("medos.patient.draft", null);
       chime();
+      toast(`Token ${b.token} booked at ${r.h.short} — it's in their Reception queue now`);
       location.hash = "#/track/" + b.code;
-    });
+    };
+    $("#book", el).addEventListener("click", doBook);
+    $("#book2", el).addEventListener("click", doBook);
 
     refreshTravel();
     const off = onChange(debounceFor(el, (why) => { if (why !== "booking") update(false); }, 500));

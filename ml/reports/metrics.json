@@ -1,0 +1,174 @@
+{
+  "dataset": {
+    "file": "ml/data/triage_synthetic.csv",
+    "rows": 8000,
+    "train": 6400,
+    "test": 1600,
+    "synthetic": true,
+    "class_counts": {
+      "low": 3281,
+      "medium": 1814,
+      "high": 1534,
+      "critical": 1371
+    }
+  },
+  "model": {
+    "type": "TF-IDF (1-2 grams) + standardised vitals \u2192 multinomial logistic regression",
+    "vocabulary": 2242,
+    "features": 2256,
+    "train_seconds": 0.85
+  },
+  "test": {
+    "ml_model": {
+      "accuracy": 0.9506,
+      "macro_f1": 0.9438,
+      "critical_recall": 0.8759,
+      "under_triage_rate": 0.0381
+    },
+    "rules_engine": {
+      "accuracy": 0.7581,
+      "macro_f1": 0.7383,
+      "critical_recall": 0.6715,
+      "under_triage_rate": 0.23
+    },
+    "rules_plus_ml_upgrade": {
+      "accuracy": 0.9675,
+      "macro_f1": 0.9643,
+      "critical_recall": 0.9818,
+      "under_triage_rate": 0.0156
+    }
+  },
+  "test_paraphrases_only": {
+    "rows": 871,
+    "ml_model": {
+      "accuracy": 0.9541,
+      "macro_f1": 0.9489,
+      "critical_recall": 0.8846,
+      "under_triage_rate": 0.0379
+    },
+    "rules_engine": {
+      "accuracy": 0.5672,
+      "macro_f1": 0.4965,
+      "critical_recall": 0.4359,
+      "under_triage_rate": 0.4145
+    },
+    "rules_plus_ml_upgrade": {
+      "accuracy": 0.9529,
+      "macro_f1": 0.9493,
+      "critical_recall": 0.9808,
+      "under_triage_rate": 0.0207
+    }
+  },
+  "confusion_matrix": {
+    "labels": [
+      "critical",
+      "high",
+      "medium",
+      "low"
+    ],
+    "ml_model": [
+      [
+        240,
+        18,
+        12,
+        4
+      ],
+      [
+        2,
+        290,
+        6,
+        9
+      ],
+      [
+        1,
+        3,
+        347,
+        12
+      ],
+      [
+        3,
+        1,
+        8,
+        644
+      ]
+    ],
+    "rules_plus_ml_upgrade": [
+      [
+        269,
+        5,
+        0,
+        0
+      ],
+      [
+        1,
+        297,
+        4,
+        5
+      ],
+      [
+        15,
+        3,
+        334,
+        11
+      ],
+      [
+        0,
+        0,
+        8,
+        648
+      ]
+    ]
+  },
+  "per_class": {
+    "critical": {
+      "precision": 0.975609756097561,
+      "recall": 0.8759124087591241,
+      "f1-score": 0.9230769230769231,
+      "support": 274.0
+    },
+    "high": {
+      "precision": 0.9294871794871795,
+      "recall": 0.9446254071661238,
+      "f1-score": 0.9369951534733441,
+      "support": 307.0
+    },
+    "medium": {
+      "precision": 0.9302949061662198,
+      "recall": 0.9559228650137741,
+      "f1-score": 0.9429347826086957,
+      "support": 363.0
+    },
+    "low": {
+      "precision": 0.9626307922272048,
+      "recall": 0.9817073170731707,
+      "f1-score": 0.9720754716981133,
+      "support": 656.0
+    },
+    "accuracy": 0.950625,
+    "macro avg": {
+      "precision": 0.9495056584945412,
+      "recall": 0.9395419995030481,
+      "f1-score": 0.9437705827142691,
+      "support": 1600.0
+    },
+    "weighted avg": {
+      "precision": 0.9511578049454249,
+      "recall": 0.950625,
+      "f1-score": 0.9503421403501952,
+      "support": 1600.0
+    }
+  },
+  "trained_at": "2026-10-02 15:43",
+  "unseen_phrasings": {
+    "held_out_phrasings": 25,
+    "rows": 1174,
+    "ml_model": 0.6184,
+    "rules_engine": 0.6908,
+    "rules_plus_ml_upgrade": 0.7283,
+    "critical_recall": {
+      "ml_model": 0.5808,
+      "rules_engine": 0.479,
+      "rules_plus_ml_upgrade": 0.6287
+    }
+  }
+}

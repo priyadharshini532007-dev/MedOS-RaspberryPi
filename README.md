@@ -144,6 +144,7 @@ defaults:   aging 5 points/minute, limit 450, re-ordered every 15 s
 
 - **Rank** comes from the priority table in the proposal (1 = severe abdominal pain … 15 = routine check-up). Ten red flags sit above it at rank 0 and are always Critical: chest pain, breathing difficulty, stroke signs, unconscious, severe bleeding, seizure, anaphylaxis, major trauma, poisoning or snake bite, severe burns. The table is editable in *Admin → Triage protocol*.
 - **Vital signs** can raise the level on their own: SpO₂ < 90 %, pulse ≥ 130 or ≤ 40, or systolic BP < 90 is Critical.
+- **Machine learning** gives a second opinion on every registration. A logistic-regression model trained on a synthetic triage dataset (`ml/`) predicts the level from the symptoms and vital signs; when it is at least 75 % confident that the case is more urgent than the rules said, the level is raised. It can never lower a priority. On held-out synthetic patients, rules alone are 75.8 % accurate and rules + model 96.8 % (critical recall 67 % → 98 %). See `ml/README.md` for the dataset, training and the honest limits.
 - **Aging** lets a Low case waiting about 70 minutes pass a newly arrived Medium case. Critical can never be overtaken: the best High score plus every modifier plus the full aging limit is still below the lowest Critical score.
 - **Dispatch**: whenever a doctor finishes or becomes available, the head of the ready queue goes to the doctor who has been idle longest.
 - **Waiting-time estimate**: a small multi-server simulation of the queue against each doctor's expected finish time, using the average consultation length per level, learned from today's finished consultations.
@@ -185,6 +186,8 @@ run.py                  start the server (python run.py --port 8080 [--https])
 medos/
   scheduler.py          dynamic priority scheduler, aging daemon, dispatch, pre-emption, ETA
   triage.py             rules engine + the priority table
+  ml_triage.py          machine-learning priority model (inference; trained in ml/)
+  models/               the trained model (triage_model.json)
   llm.py                Qwen 3 via Ollama, AI worker thread, network discovery
   voice.py              Vosk speech recognition, USB mic, spoken-form parser
   hardware.py           GPIO button interrupt, LED, buzzer (simulated off-Pi)
@@ -195,7 +198,9 @@ medos/
   templates/ static/    the screens (no build step, works offline)
 deploy/                 install.sh, hotspot.sh, direct-cable.sh, display-autostart.sh
 laptop/                 enable-ollama-lan.ps1 / disable-ollama-lan.ps1
-tests/                  pytest suite for triage and scheduling
+ml/                     synthetic triage dataset, training script, evaluation report
+website/                the website version (static; deploys to Vercel)
+tests/                  pytest suite for triage, scheduling and the ML model
 ```
 
 Data lives in `data/medos.db` (SQLite). *Admin → Settings → Data* exports CSV, reloads the demo, or clears patients.

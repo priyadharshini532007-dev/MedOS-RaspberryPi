@@ -60,6 +60,8 @@ CREATE TABLE IF NOT EXISTS patients (
     ai_reasoning    TEXT,
     ai_department   TEXT,
     ai_brief        TEXT,
+    ml_level        TEXT,
+    ml_confidence   REAL,
     source          TEXT NOT NULL DEFAULT 'reception',
     emergency       INTEGER NOT NULL DEFAULT 0,
     preempted       INTEGER NOT NULL DEFAULT 0,
@@ -185,6 +187,8 @@ DEFAULT_SETTINGS: Dict[str, Any] = {
     "llm_model": "qwen3:4b",
     "llm_timeout": 120,
     "ai_triage": True,
+    # Machine-learning priority model (medos/ml_triage.py): upgrade-only second opinion
+    "ml_triage": True,
     # Voice + display
     "voice_lang": "en-IN",
     "announce": True,
@@ -200,7 +204,7 @@ DEFAULT_SETTINGS: Dict[str, Any] = {
 PUBLIC_SETTINGS = (
     "hospital_name", "aging_rate", "aging_cap", "tick_seconds", "preemption", "auto_dispatch",
     "notify_ahead", "dur_critical", "dur_high", "dur_medium", "dur_low",
-    "llm_enabled", "llm_url", "llm_model", "llm_timeout", "ai_triage",
+    "llm_enabled", "llm_url", "llm_model", "llm_timeout", "ai_triage", "ml_triage",
     "voice_lang", "announce", "buzz_on_call", "alarm_buzzer_seconds", "display_message",
     "pharmacy_prep_min", "ambulance_speed_kmh",
 )
@@ -352,6 +356,11 @@ def seed_conditions() -> None:
 def init() -> None:
     c = conn()
     c.executescript(SCHEMA)
+    # Databases created before the ML model existed: add its columns.
+    have = {r[1] for r in c.execute("PRAGMA table_info(patients)").fetchall()}
+    for col, typ in (("ml_level", "TEXT"), ("ml_confidence", "REAL")):
+        if col not in have:
+            c.execute("ALTER TABLE patients ADD COLUMN %s %s" % (col, typ))
     for k, v in DEFAULT_SETTINGS.items():
         c.execute("INSERT OR IGNORE INTO settings(key,value) VALUES(?,?)", (k, json.dumps(v)))
     _settings_cache.clear()
