@@ -42,6 +42,48 @@ const Voice = (() => {
   }
   async function clearClips() { try { const d = await db(); d.transaction("clips", "readwrite").objectStore("clips").clear(); } catch { /* none */ } }
 
+  // ---------------------------------------------------------------- transcript assembly
+  // Desktop Chrome gives each phrase once ("my name is Kavita", "I am 34"). Android Chrome instead gives
+  // a growing copy of everything said so far as each new result ("my name is", "my name is Kavita", "my
+  // name is Kavita I am 34"…). Appending them all made the text snowball, so the transcript is rebuilt
+  // from the whole result list every time, and a result that repeats or extends the previous one
+  // replaces it instead of being added.
+  const norm = (s) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+  const words = (s) => norm(s).split(" ").filter(Boolean);
+  // True when b is a.restated: the same opening words (allowing a word or two to be corrected, e.g.
+  // "Kavita" → "Kavitha"), as Android sends when it re-sends a phrase.
+  function restates(a, b) {
+    const wa = words(a), wb = words(b);
+    if (!wa.length || !wb.length) return false;
+    const n = Math.min(wa.length, wb.length);
+    let same = 0;
+    for (let i = 0; i < n; i++) if (wa[i] === wb[i]) same++;
+    return wa[0] === wb[0] && same >= Math.max(1, Math.ceil(n * 0.6));
+  }
+  function mergeResults(results, cumulative = isAndroid) {
+    const parts = [];
+    for (let i = 0; i < results.length; i++) {
+      const t = (results[i][0] && results[i][0].transcript || "").trim();
+      if (!t) continue;
+      const last = parts[parts.length - 1];
+      if (cumulative && last !== undefined && restates(last, t)) {
+        if (words(t).length >= words(last).length) parts[parts.length - 1] = t;   // the same phrase, grown or corrected
+        continue;                                                                   // a shorter repeat of it
+      }
+      parts.push(t);
+    }
+    return parts.join(" ");
+  }
+  // Join the text of an earlier session (before a pause or the browser's own restart) with the next one,
+  // without doubling words if the new session starts by repeating the end of the old one.
+  function joinText(before, next) {
+    if (!before) return next;
+    if (!next) return before;
+    if (isAndroid && restates(before, next)) return words(next).length >= words(before).length ? next : before;
+    if (norm(before).endsWith(norm(next))) return before;
+    return before + " " + next;
+  }
+
   // ---------------------------------------------------------------- one recording session
   // The browser ends a recognition session by itself after a long silence or about a minute of speech;
   // a new one starts straight away and the text heard so far is kept. maxSeconds is only a safety cap.
@@ -52,7 +94,8 @@ const Voice = (() => {
     const promise = new Promise(async (resolve, reject) => {
       if (!caps.speech) return reject(new Error("This browser has no speech recognition. Use Chrome, Edge or Safari, or type instead."));
       let stream = null, recorder = null, chunks = [], meter = null, ctx = null;
-      let rec = null, finalText = "", interim = "", userStopped = false, paused = false, settled = false, hard = null;
+      // committed: text from finished sessions; current: everything heard in the session now running
+      let rec = null, committed = "", current = "", userStopped = false, paused = false, settled = false, hard = null;
       let spoken = 0, since = performance.now();   // recorded time, not counting pauses
       const wantRecord = record && caps.canRecordWithSpeech;
       if (caps.record && !isAndroid) {   // Android can't share the mic with recognition
@@ -87,7 +130,7 @@ const Voice = (() => {
           } catch { recorder = null; }
         }
       }
-      const text = () => (finalText + " " + interim).replace(/\s+/g, " ").trim();
+      const text = () => joinText(committed, current).replace(/\s+/g, " ").trim();
       const stopRecorder = () => new Promise((res) => {
         if (!recorder || recorder.state === "inactive") return res(null);
         recorder.onstop = () => res(new Blob(chunks, { type: recorder.mimeType || "audio/webm" }));
@@ -113,12 +156,9 @@ const Voice = (() => {
         rec = new SR();
         rec.lang = lang; rec.interimResults = true; rec.continuous = true; rec.maxAlternatives = 1;
         rec.onresult = (ev) => {
-          interim = "";
-          for (let i = ev.resultIndex; i < ev.results.length; i++) {
-            const r = ev.results[i];
-            if (r.isFinal) finalText += " " + r[0].transcript; else interim += r[0].transcript;
-          }
-          onPartial(text(), !interim);
+          current = mergeResults(ev.results);
+          const last = ev.results[ev.results.length - 1];
+          onPartial(text(), !!(last && last.isFinal));
         };
         rec.onerror = (e) => {
           if (e.error === "no-speech" || e.error === "aborted") return;   // silence is fine; onend restarts
@@ -129,7 +169,7 @@ const Voice = (() => {
           finish(new Error(msg || "Speech recognition stopped (" + e.error + ")"));
         };
         rec.onend = () => {
-          if (interim) { finalText += " " + interim; interim = ""; }   // keep words heard just before the break
+          committed = joinText(committed, current); current = "";   // keep everything this session heard
           if (settled) return;
           if (userStopped) return finish();
           if (paused) return;
@@ -160,7 +200,7 @@ const Voice = (() => {
     return { promise, stop: () => ctl.stop(), pause: () => ctl.pause(), resume: () => ctl.resume(), elapsed: () => ctl.elapsed() };
   }
 
-  return { caps, listen, getClip, clearClips };
+  return { caps, listen, getClip, clearClips, _mergeResults: mergeResults, _joinText: joinText };
 })();
 
 // A reusable "speak to fill" widget: mic button (start / stop), pause-resume, timer, live waveform and
@@ -212,6 +252,7 @@ function mountVoice(el, { onResult, source = "reception", compact = false, lang 
     live.innerHTML = paused
       ? `${heard ? "“" + esc(heard) + "” " : ""}<span class="muted">— paused. Resume to carry on, or Stop when you're done.</span>`
       : heard ? esc(heard) + '<span class="caret"></span>' : "Recording… speak whenever you're ready.";
+    live.scrollTop = live.scrollHeight;   // long transcripts scroll inside the box, newest words in view
   };
   const setPaused = (p) => {
     paused = p;

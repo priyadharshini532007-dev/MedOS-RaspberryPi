@@ -52,15 +52,55 @@ function listenPi({ onPartial, maxSeconds }) {
     stop() { api("voice/stop", { method: "POST" }).catch(noop); } };
 }
 
+// ---------------------------------------------------------------- transcript assembly
+// Desktop Chrome gives each phrase once. Android Chrome instead gives a growing copy of everything said
+// so far as each new result ("my name is", "my name is Kavita", "my name is Kavita I am 34"…), so
+// appending them made the text repeat itself. The transcript is rebuilt from the whole result list each
+// time; on Android a result that restates the previous one (grown, or with a word corrected) replaces it.
+const IS_ANDROID = /Android/i.test(navigator.userAgent);
+const normText = (s) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+const wordsOf = (s) => normText(s).split(" ").filter(Boolean);
+function restates(a, b) {
+  const wa = wordsOf(a), wb = wordsOf(b);
+  if (!wa.length || !wb.length) return false;
+  const n = Math.min(wa.length, wb.length);
+  let same = 0;
+  for (let i = 0; i < n; i++) if (wa[i] === wb[i]) same++;
+  return wa[0] === wb[0] && same >= Math.max(1, Math.ceil(n * 0.6));
+}
+export function mergeResults(results, cumulative = IS_ANDROID) {
+  const parts = [];
+  for (let i = 0; i < results.length; i++) {
+    const t = ((results[i][0] && results[i][0].transcript) || "").trim();
+    if (!t) continue;
+    const last = parts[parts.length - 1];
+    if (cumulative && last !== undefined && restates(last, t)) {
+      if (wordsOf(t).length >= wordsOf(last).length) parts[parts.length - 1] = t;
+      continue;
+    }
+    parts.push(t);
+  }
+  return parts.join(" ");
+}
+// Join an earlier session's text (before a pause or the browser's own restart) with the next one.
+function joinText(before, next) {
+  if (!before) return next;
+  if (!next) return before;
+  if (IS_ANDROID && restates(before, next)) return wordsOf(next).length >= wordsOf(before).length ? next : before;
+  if (normText(before).endsWith(normText(next))) return before;
+  return before + " " + next;
+}
+
 // ---------------------------------------------------------------- browser speech recognition
 // The browser ends a recognition session by itself after a long silence or about a minute of speech;
 // we start a new one straight away and keep the text heard so far, until the user presses Stop.
 function listenSpeech({ lang, onPartial, maxSeconds }) {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  let rec = null, finalText = "", interim = "", userStopped = false, paused = false, settled = false, hardStop = null;
+  // committed: text from finished sessions; current: everything heard in the session now running
+  let rec = null, committed = "", current = "", userStopped = false, paused = false, settled = false, hardStop = null;
   let resolveP, rejectP;
   const promise = new Promise((res, rej) => { resolveP = res; rejectP = rej; });
-  const text = () => (finalText + " " + interim).replace(/\s+/g, " ").trim();
+  const text = () => joinText(committed, current).replace(/\s+/g, " ").trim();
   const finish = async () => {
     if (settled) return;
     settled = true; clearTimeout(hardStop);
@@ -73,11 +113,7 @@ function listenSpeech({ lang, onPartial, maxSeconds }) {
     rec = new SR();
     rec.lang = lang; rec.interimResults = true; rec.continuous = true; rec.maxAlternatives = 1;
     rec.onresult = (ev) => {
-      interim = "";
-      for (let i = ev.resultIndex; i < ev.results.length; i++) {
-        const r = ev.results[i];
-        if (r.isFinal) finalText += " " + r[0].transcript; else interim += r[0].transcript;
-      }
+      current = mergeResults(ev.results);
       onPartial(text());
     };
     rec.onerror = (e) => {
@@ -88,7 +124,7 @@ function listenSpeech({ lang, onPartial, maxSeconds }) {
       fail(new Error(msg || "Speech recognition stopped (" + e.error + ")"));
     };
     rec.onend = () => {
-      if (interim) { finalText += " " + interim; interim = ""; }   // keep words heard just before the break
+      committed = joinText(committed, current); current = "";   // keep everything this session heard
       if (settled) return;
       if (userStopped) return finish();
       if (paused) return;
