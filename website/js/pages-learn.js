@@ -95,7 +95,7 @@ PAGES.lab = {
       const opts = { doctors: +$("#docs", el).value, rate: +$("#rate", el).value, cap: +$("#cap", el).value };
       let patients;
       if (source === "today") {
-        const ps = S.patients.filter((p) => p.status !== "cancelled").sort((a, b) => a.arrived - b.arrived);
+        const ps = S.patients.filter((p) => p.status !== "cancelled" && isSelfPatient(p)).sort((a, b) => a.arrived - b.arrived);
         const t0 = ps.length ? ps[0].arrived : 0;
         patients = ps.map((p) => ({ token: p.token, arrival: (p.arrived - t0) / 60000, level: p.level, rank: p.rank, base: p.base, emergency: p.emergency, duration: p.consult_s > 30 ? p.consult_s / 60 : LAB_DUR[p.level] }));
       } else patients = labPatients(+$("#n", el).value, +$("#win", el).value, +$("#em", el).value, seed);

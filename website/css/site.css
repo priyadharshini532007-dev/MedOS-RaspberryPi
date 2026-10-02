@@ -510,3 +510,7 @@ dialog.modal::backdrop { background: rgba(15, 23, 42, .5); }
 .voice-box.paused .mic-btn { background: var(--med); }
 .voice-box.paused .mic-ring { animation: none; opacity: 0; }
 .voice-box.paused .rec-dot { background: var(--med); animation: none; }
+
+/* hospital label on Reception rows */
+.qrow .who .hosp-tag { display: inline; font-weight: 700; color: var(--info); }
+.qrow .who .hosp-tag[data-self="1"] { color: var(--primary-soft-text); }

@@ -9,23 +9,26 @@ function priorityBar(p) {
   return `<div class="pbar" style="color:${col}" title="Base ${Math.round(p.score.base)} + aging ${Math.round(p.score.aging)}${p.score.preempt ? " + pre-empted " + Math.round(p.score.preempt) : ""}${p.score.emergency ? " + emergency 5000" : ""}">
     <i style="width:${(base / max) * 100}%;background:${col}"></i><i class="aging" style="width:${(ag / max) * 100}%"></i>${pre ? `<i style="width:${(pre / max) * 100}%;background:var(--crit);opacity:.5"></i>` : ""}</div>`;
 }
-function queueRows(q, eta, { actions = false } = {}) {
+function queueRows(q, eta, { actions = false, showHosp = false, fresh = new Set() } = {}) {
   if (!q.length) return `<div class="empty">${icon("check")}<p>Nobody is waiting.</p></div>`;
-  return q.map((p) => `<div class="qrow" data-pid="${p.id}">
+  return q.map((p) => {
+    const h = hospitalById(hospOf(p));
+    return `<div class="qrow ${fresh.has(p.id) ? "flash" : ""}" data-pid="${p.id}">
     <span class="pos">${p.position}</span>${tokenChip(p.token, p.level)}
-    <span class="who"><b>${esc(p.name || "Unnamed")} ${p.emergency ? `<span class="pill bad">${icon("siren")}Emergency</span>` : ""}${p.preempted ? `<span class="pill warn">Resumes next</span>` : ""}${p.voiceId ? `<span class="pill info" title="Registered by voice">${icon("mic")}</span>` : ""}</b>
-      <small>${esc(ageSex(p))}${ageSex(p) ? " · " : ""}${esc(p.primary)} · ${esc(p.source)}</small></span>
+    <span class="who"><b>${esc(p.name || "Unnamed")} ${fresh.has(p.id) ? `<span class="pill brand">New</span>` : ""}${p.emergency ? `<span class="pill bad">${icon("siren")}Emergency</span>` : ""}${p.preempted ? `<span class="pill warn">Resumes next</span>` : ""}${p.voiceId ? `<span class="pill info" title="Registered by voice">${icon("mic")}</span>` : ""}</b>
+      <small>${showHosp ? `<b class="hosp-tag" data-self="${h.self ? 1 : 0}">${esc(h.short)}${p.hospPosition ? " #" + p.hospPosition : ""}</b> · ` : ""}${esc(ageSex(p))}${ageSex(p) ? " · " : ""}${esc(p.primary)} · ${esc(p.source)}</small></span>
     <span class="lvl">${prio(p.level)}${priorityBar(p)}</span>
     <span class="eta"><b>${eta[p.id] == null ? "—" : fmtMin(eta[p.id])}</b><span class="muted">waited ${fmtMin((Date.now() - p.arrived) / 60000)}</span>
       ${actions ? `<button class="btn sm ghost" data-cancel="${p.id}" style="margin-top:4px">Left</button>` : ""}</span>
-  </div>`).join("");
+  </div>`;
+  }).join("");
 }
 function tokenSlip(p) {
   const url = location.href.split("#")[0] + "#/track/" + p.code;
-  const q = readyQueue(), me = q.find((x) => x.id === p.id), eta = estimates(q);
+  const q = readyQueue(Date.now(), hospOf(p)), me = q.find((x) => x.id === p.id), eta = etaAll(q);
   modal({ title: "Token slip", body: `<div class="ticket">
       <div class="ticket-top"><div><small>Token</small><div class="tnum">${esc(p.token)}</div></div><div style="background:#fff;border-radius:999px;padding:2px">${prio(p.level, { lg: true })}</div></div>
-      <div class="ticket-body"><div class="row-between"><div><b>${esc(p.name || "Patient")}</b><div class="t-small muted">${esc(ageSex(p))} · ${esc(p.primary)}</div></div></div>
+      <div class="ticket-body"><div class="row-between"><div><b>${esc(p.name || "Patient")}</b><div class="t-small muted">${esc(hospitalById(hospOf(p)).name)} · ${esc(ageSex(p))} · ${esc(p.primary)}</div></div></div>
         <div class="grid-3"><div class="big-stat"><b>${me ? me.position : "—"}</b><span>Position</span></div><div class="big-stat"><b>${me ? fmtMin(eta[p.id]) : p.status === "in_consultation" ? "Now" : "—"}</b><span>Estimated wait</span></div><div class="big-stat"><b>${esc(p.department)}</b><span>Department</span></div></div></div>
       <div class="ticket-cut"></div>
       <div class="ticket-body"><div class="row" style="gap:16px;flex-wrap:nowrap">${qrSvg(url, 112)}<div class="t-small muted">Scan to follow this token on your phone.<br>Code <b class="mono">${esc(p.code)}</b></div></div></div></div>`,
@@ -82,7 +85,12 @@ PAGES.reception = {
         <div class="stack">
           <section class="card">
             <div class="card-head"><h2 class="t-h3">${icon("list")}Waiting queue</h2><span class="t-small muted" id="qsum"></span></div>
+            <div class="card-body" style="padding-bottom:0"><div class="seg seg-sm" id="hfilter" role="group" aria-label="Hospital"></div></div>
             <div class="qlist" id="queue"></div>
+          </section>
+          <section class="card hidden" id="amb-card">
+            <div class="card-head"><h2 class="t-h3">${icon("ambulance")}Incoming ambulances</h2></div>
+            <div class="qlist" id="incoming"></div>
           </section>
           <section class="card">
             <div class="card-head"><h2 class="t-h3">${icon("stetho")}With a doctor</h2></div>
@@ -128,14 +136,49 @@ PAGES.reception = {
       if (c) { if (await confirmDialog("Remove from queue?", "Mark this patient as having left.", { confirm: "Remove", danger: true })) cancelPatient(+c.dataset.cancel); return; }
       const row = e.target.closest("[data-pid]"); if (row) tokenSlip(getPatient(+row.dataset.pid));
     });
+    // Hospital filter: every booking shows up here, whichever hospital it is for.
+    let hfilter = store("medos.reception.hospital") || "all";
+    const known = new Set(S.patients.filter((p) => p.status === "waiting").map((p) => p.id));
+    const fresh = new Set();
+    $("#hfilter", el).addEventListener("click", (e) => {
+      const b = e.target.closest("button"); if (!b) return;
+      hfilter = b.dataset.h; store("medos.reception.hospital", hfilter); draw();
+    });
     const draw = () => {
-      const q = readyQueue(), eta = estimates(q);
+      const all = waitingAll(), eta = etaAll(all);
+      // New arrivals since this page opened (an online booking from another tab, a voice registration…)
+      all.filter((p) => !known.has(p.id)).forEach((p) => {
+        known.add(p.id); fresh.add(p.id); setTimeout(() => fresh.delete(p.id), 20000);
+        if (p.source === "online booking") {
+          const h = hospitalById(hospOf(p));
+          softPing();
+          toast(`New online booking: Token ${p.token} · ${p.name || "Patient"} · ${LEVEL_LABEL[p.level]} · ${h.short}`, p.level === "critical" ? "error" : "ok", 6000);
+        }
+      });
+      const counts = {};
+      all.forEach((p) => (counts[hospOf(p)] = (counts[hospOf(p)] || 0) + 1));
+      const hs = HOSPITALS.filter((h) => h.self || counts[h.id]);
+      if (hfilter !== "all" && !hs.some((h) => String(h.id) === hfilter)) hfilter = "all";
+      $("#hfilter", el).innerHTML = `<button type="button" data-h="all" aria-pressed="${hfilter === "all"}">All hospitals · ${all.length}</button>` +
+        hs.map((h) => `<button type="button" data-h="${h.id}" aria-pressed="${hfilter === String(h.id)}">${esc(h.short)} · ${counts[h.id] || 0}</button>`).join("");
+      let q = hfilter === "all" ? all : all.filter((p) => String(hospOf(p)) === hfilter);
+      if (hfilter !== "all") q = q.map((p) => ({ ...p, position: p.hospPosition }));
       $("#qsum", el).textContent = `${q.length} waiting · ${LEVELS.map((l) => `${q.filter((p) => p.level === l).length} ${LEVEL_LABEL[l].toLowerCase()}`).join(" · ")}`;
-      $("#queue", el).innerHTML = queueRows(q, eta, { actions: true });
-      const serving = S.patients.filter((p) => p.status === "in_consultation");
+      $("#queue", el).innerHTML = queueRows(q, eta, { actions: true, showHosp: true, fresh });
+      // Ambulances on their way to any hospital
+      const amb = S.ambRequests.filter((r) => r.status === "waiting" || r.status === "dispatched");
+      $("#amb-card", el).classList.toggle("hidden", !amb.length);
+      $("#incoming", el).innerHTML = amb.map((r) => {
+        const ph = ambulancePhase(r);
+        return `<div class="qrow" style="grid-template-columns:64px minmax(0,1fr) auto">${tokenChip("AMB-" + String(r.id).padStart(3, "0"), r.level)}
+          <span class="who"><b>${esc(r.name || "Patient")} → ${esc(hospitalById(r.hospitalId).short)}</b><small>${esc(r.condition)} · ${esc(ph.label)}</small></span>
+          <span class="eta">${prio(r.level)}</span></div>`;
+      }).join("");
+      const serving = S.patients.filter((p) => p.status === "in_consultation" && (hfilter === "all" || String(hospOf(p)) === hfilter));
       $("#serving", el).innerHTML = serving.length ? serving.map((p) => {
         const d = S.doctors.find((x) => x.id === p.doctorId), room = d && S.rooms.find((r) => r.id === d.roomId);
-        return `<div class="qrow" style="grid-template-columns:64px minmax(0,1fr) auto">${tokenChip(p.token, p.level)}<span class="who"><b>${esc(p.name || "—")}</b><small>${esc(d ? d.name : "")}${room ? " · " + esc(room.name) : ""}</small></span><span class="eta">${fmtMin((Date.now() - p.called) / 60000)}</span></div>`;
+        const where = isSelfPatient(p) ? `${esc(d ? d.name : "")}${room ? " · " + esc(room.name) : ""}` : `With a doctor at ${esc(hospitalById(hospOf(p)).short)}`;
+        return `<div class="qrow" style="grid-template-columns:64px minmax(0,1fr) auto">${tokenChip(p.token, p.level)}<span class="who"><b>${esc(p.name || "—")}</b><small>${where}</small></span><span class="eta">${fmtMin((Date.now() - p.called) / 60000)}</span></div>`;
       }).join("") : `<div class="empty"><p>No consultations right now.</p></div>`;
     };
     draw();
@@ -412,7 +455,7 @@ PAGES.display = {
         $("#call", el).classList.remove("pulse"); void $("#call", el).offsetWidth; $("#call", el).classList.add("pulse");
         if (sound) { chime(); setTimeout(() => speak(`Token ${spokenToken(c.token)}, please go to ${c.room || "the consultation room"}`), 1200); }
       }
-      const serv = S.patients.filter((p) => p.status === "in_consultation");
+      const serv = S.patients.filter((p) => p.status === "in_consultation" && isSelfPatient(p));
       $("#serv", el).innerHTML = serv.map((p) => { const d = S.doctors.find((x) => x.id === p.doctorId), r = d && S.rooms.find((x) => x.id === d.roomId); return `<div><span>${esc(p.token)}</span><span style="color:#94a3b8">${esc(r ? r.name : "")}</span></div>`; }).join("") || `<div style="color:#64748b">—</div>`;
       $("#next", el).innerHTML = readyQueue().slice(0, 8).map((p) => `<span style="border-color:${LEVEL_COLOR[p.level]}">${esc(p.token)}</span>`).join("") || `<span style="border-color:#334155;color:#64748b">—</span>`;
       $("#ready", el).innerHTML = S.pharmacy.filter((o) => o.status === "ready").map((o) => `<span style="border-color:#22d3ee">${esc(o.token)}</span>`).join("") || `<span style="border-color:#334155;color:#64748b">—</span>`;
@@ -478,14 +521,14 @@ PAGES.admin = {
       const q = readyQueue(), eta = estimates(q), t = Date.now();
       const docsAvail = S.doctors.filter((d) => d.status === "available").length, onDuty = S.doctors.filter((d) => d.status !== "off_duty" && d.status !== "break").length;
       const busyRooms = new Set(S.doctors.filter((d) => d.status === "busy").map((d) => d.roomId));
-      const done = S.patients.filter((p) => p.status === "completed");
+      const done = S.patients.filter((p) => p.status === "completed" && isSelfPatient(p));
       const avgWait = done.length ? done.reduce((s, p) => s + (p.wait_s || 0), 0) / done.length / 60 : null;
       $("#kpis", el).innerHTML = [["stetho", "Doctors available", `${docsAvail}`, `${onDuty} on duty of ${S.doctors.length}`], ["door", "Rooms free", `${S.rooms.length - busyRooms.size}`, `of ${S.rooms.length} rooms`],
         ["users", "Queue length", `${q.length}`, `${q.filter((p) => p.level === "critical").length} critical · ${q.filter((p) => p.level === "high").length} high`],
         ["clock", "Average wait today", avgWait == null ? "—" : fmtMin(avgWait), `${done.length} consultations finished`]]
         .map(([ic, l, v, s]) => `<div class="card kpi"><span class="k-label">${icon(ic)}${l}</span><span class="k-value">${v}</span><span class="k-sub">${s}</span></div>`).join("") +
         (openAlerts().length ? `<div class="notice bad" style="grid-column:1/-1">${icon("siren")}<div><b>${openAlerts().length} emergency alert${openAlerts().length > 1 ? "s" : ""}</b> — ${esc(openAlerts().map((a) => a.message).join("; "))}</div></div>` : "");
-      const todayP = S.patients.filter((p) => p.status !== "cancelled");
+      const todayP = S.patients.filter((p) => p.status !== "cancelled" && isSelfPatient(p));
       const maxL = Math.max(1, ...LEVELS.map((l) => todayP.filter((p) => p.level === l).length));
       $("#bylevel", el).innerHTML = LEVELS.map((l) => { const n = todayP.filter((p) => p.level === l).length; return `<div class="bar-row"><span>${prio(l)}</span><div class="bar-track"><i style="width:${(n / maxL) * 100}%;background:${LEVEL_COLOR[l]}"></i></div><b class="num">${n}</b></div>`; }).join("");
       const wl = Object.fromEntries(LEVELS.map((l) => { const ps = done.filter((p) => p.level === l); return [l, ps.length ? ps.reduce((s, p) => s + p.wait_s, 0) / ps.length / 60 : 0]; }));

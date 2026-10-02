@@ -77,19 +77,47 @@ function scoreParts(p, t = Date.now()) {
   const em = p.emergency ? EMERGENCY_BONUS : 0;
   return { base: p.base, aging: Math.round(aging * 10) / 10, preempt: pre, emergency: em, total: Math.round((p.base + aging + pre + em) * 10) / 10 };
 }
-// Waiting patients in dispatch order (highest score first, ties by arrival — FCFS inside equal priority).
-function readyQueue(t = Date.now()) {
-  const q = S.patients.filter((p) => p.status === "waiting").map((p) => ({ ...p, score: scoreParts(p, t) }));
+// Which hospital a patient belongs to. Patients saved before bookings covered every hospital are City General's.
+const SELF_ID = 1;
+const hospOf = (p) => p.hospitalId || SELF_ID;
+const isSelfPatient = (p) => hospOf(p) === SELF_ID;
+
+// Waiting patients of one hospital in dispatch order (highest score first, ties by arrival — FCFS inside
+// equal priority). City General's doctors only ever see City General's queue.
+function readyQueue(t = Date.now(), hospitalId = SELF_ID) {
+  const q = S.patients.filter((p) => p.status === "waiting" && hospOf(p) === hospitalId).map((p) => ({ ...p, score: scoreParts(p, t) }));
   q.sort((a, b) => b.score.total - a.score.total || a.arrived - b.arrived || a.id - b.id);
   q.forEach((p, i) => (p.position = i + 1));
   return q;
+}
+// Every waiting patient across all hospitals, in priority order, for the Reception list.
+// position = rank in this combined list; hospPosition = place in their own hospital's queue.
+function waitingAll(t = Date.now()) {
+  const byHosp = {};
+  const q = S.patients.filter((p) => p.status === "waiting").map((p) => ({ ...p, score: scoreParts(p, t) }));
+  q.sort((a, b) => b.score.total - a.score.total || a.arrived - b.arrived || a.id - b.id);
+  q.forEach((p, i) => { p.position = i + 1; const h = hospOf(p); byHosp[h] = (byHosp[h] || 0) + 1; p.hospPosition = byHosp[h]; });
+  return q;
+}
+// Minutes until each waiting patient is seen: the scheduler's estimate at City General, the booking's
+// projection from the reported queue elsewhere.
+function etaAll(q, t = Date.now()) {
+  const own = estimates(q.filter(isSelfPatient), t);
+  const out = {};
+  q.forEach((p) => {
+    if (isSelfPatient(p)) { out[p.id] = own[p.id]; return; }
+    const b = S.bookings.find((x) => x.patientId === p.id);
+    const st = b ? bookingStatus(b, t) : null;
+    out[p.id] = st && st.state === "waiting" ? Math.max(0, st.etaMin) : null;
+  });
+  return out;
 }
 // Expected consultation minutes per level: learned from today's finished consultations, defaults otherwise.
 function durations() {
   const out = {};
   for (const l of LEVELS) {
     const def = S.settings.dur[l];
-    const done = S.patients.filter((p) => p.status === "completed" && p.level === l && p.consult_s > 30);
+    const done = S.patients.filter((p) => p.status === "completed" && p.level === l && p.consult_s > 30 && isSelfPatient(p));
     out[l] = done.length >= 3 ? Math.round(((done.reduce((s, p) => s + p.consult_s / 60, 0)) + def * 3) / (done.length + 3) * 10) / 10 : def;
   }
   return out;
@@ -115,25 +143,26 @@ function estimates(queue, t = Date.now()) {
 }
 
 // ------------------------------------------------------------------ registration
-function register(data, source = "reception", { arrived = Date.now(), dispatchNow = true, silent = false } = {}) {
+function register(data, source = "reception", { arrived = Date.now(), dispatchNow = true, silent = false, hospitalId = SELF_ID, token: fixedToken = null } = {}) {
   const vitals = Object.fromEntries(Object.entries(data.vitals || {}).filter(([, v]) => v !== "" && v != null));
   const age = data.age === "" || data.age == null ? null : parseInt(data.age, 10);
   const r = analyse(data.symptoms || "", age, vitals, !!data.pregnant);
   let level = r.level, rank = r.rank;
   if (data.level_override && LEVEL_ORDER[data.level_override] < LEVEL_ORDER[level]) { level = data.level_override; rank = level === "critical" ? 0 : rank; }
   const id = nextId("patient");
-  const token = String(nextId("token")).padStart(3, "0");
+  const token = fixedToken || String(nextId("token")).padStart(3, "0");
   const p = {
-    id, token, code: randCode(), day: today(), name: (data.name || "").trim() || null, age, sex: data.sex || null, phone: data.phone || null,
+    id, token, code: randCode(), day: today(), hospitalId, name: (data.name || "").trim() || null, age, sex: data.sex || null, phone: data.phone || null,
     symptoms: (data.symptoms || "").trim(), vitals, pregnant: !!data.pregnant, level, rank, base: baseScore(level, rank, r.bonus),
     primary: r.primary_condition, conditions: r.conditions, red_flags: r.red_flags, reasons: r.reasons, department: r.department,
     source, emergency: !!data.emergency, preempted: false, status: "waiting", doctorId: null, roomId: null,
     arrived, called: null, completed: null, wait_s: null, consult_s: 0, outcome: null, notes: null, voiceId: data.voiceId || null,
   };
   S.patients.push(p);
-  if (!silent) log("ARRIVE", `Token ${token} via ${source}: ${LEVEL_LABEL[level]} — ${r.primary_condition} (score ${Math.round(p.base)})`, id);
+  const where = hospitalId === SELF_ID ? "" : ` at ${hospitalById(hospitalId).name}`;
+  if (!silent) log("ARRIVE", `Token ${token} via ${source}${where}: ${LEVEL_LABEL[level]} — ${r.primary_condition} (score ${Math.round(p.base)})`, id);
   if (data.voiceId) { const v = S.voice.find((x) => x.id === data.voiceId); if (v) { v.patientId = id; v.status = "registered"; } }
-  if (dispatchNow && S.settings.auto_dispatch) dispatch("arrival");
+  if (dispatchNow && hospitalId === SELF_ID && S.settings.auto_dispatch) dispatch("arrival");
   if (!silent) save("arrival");
   return p;
 }
@@ -144,6 +173,7 @@ function cancelPatient(id, reason = "left") {
   const p = getPatient(id);
   if (!p || p.status !== "waiting") return;
   p.status = "cancelled"; p.completed = Date.now();
+  S.bookings.filter((b) => b.patientId === id && b.status !== "cancelled").forEach((b) => (b.status = "cancelled"));
   log("CANCEL", `Token ${p.token} left the queue (${reason})`, id);
   save();
 }
@@ -269,6 +299,7 @@ function agingTick() {
   }
   S._order = q.map((p) => p.id);
   if (S.settings.auto_dispatch) dispatch("tick");
+  syncOtherHospitals();
   ambulanceTick();
   save("tick");
 }
@@ -421,16 +452,12 @@ function bookToken({ name, age, sex, phone, symptoms, pregnant, voiceId }, row, 
   const id = nextId("booking");
   const b = { id, type: "token", hospitalId: h.id, hospitalName: h.name, created: Date.now(), name, age, phone, symptoms, origin,
     level: null, dept: row.dept, expectedWait: row.wait, travelMin: row.travelMin, consult: row.consult, total: row.total, ahead: row.ahead, status: "active" };
-  if (h.self) {
-    const p = register({ name, age, sex, phone, symptoms, pregnant, voiceId }, "online booking");
-    b.patientId = p.id; b.token = p.token; b.code = p.code; b.level = p.level;
-  } else {
-    const t = analyse(symptoms || "", age, {}, pregnant);
-    b.level = t.level;
-    b.token = `${h.short.slice(0, 2).toUpperCase()}-${String(20 + Math.floor(Math.random() * 60) + row.ahead).padStart(3, "0")}`;
-    b.code = randCode();
-    if (voiceId) { const v = S.voice.find((x) => x.id === voiceId); if (v) v.status = "booked"; }
-  }
+  // Every booking joins the Reception list at once. City General's goes into the live scheduler; another
+  // hospital's is tagged with that hospital and follows its reported queue (see syncOtherHospitals).
+  const token = h.self ? null : `${h.short.slice(0, 2).toUpperCase()}-${String(20 + Math.floor(Math.random() * 60) + row.ahead).padStart(3, "0")}`;
+  const p = register({ name, age, sex, phone, symptoms, pregnant, voiceId }, "online booking", { hospitalId: h.id, token, silent: true });
+  log("ARRIVE", `Token ${p.token} booked online for ${h.name}: ${LEVEL_LABEL[p.level]} — ${p.primary} (score ${Math.round(p.base)})`, p.id);
+  b.patientId = p.id; b.token = p.token; b.code = p.code; b.level = p.level;
   S.bookings.push(b);
   log("BOOKING", `Token ${b.token} booked online at ${h.name} — ${fmtMin(row.total)} to a prescription (best of ${HOSPITALS.length})`);
   save("booking");
@@ -441,7 +468,7 @@ function bookingByCode(code) { return S.bookings.find((b) => b.code === code); }
 // Live position of a booking: real for City General, projected from the reported queue elsewhere.
 function bookingStatus(b, t = Date.now()) {
   if (b.type === "ambulance") return null;
-  if (b.patientId) {
+  if (b.patientId && (b.hospitalId || SELF_ID) === SELF_ID) {
     const p = getPatient(b.patientId);
     if (!p) return { state: "unknown" };
     if (p.status === "waiting") {
@@ -468,6 +495,19 @@ function cancelBooking(id) {
   if (b.patientId) cancelPatient(b.patientId, "cancelled online");
   if (b.ambRequestId) cancelAmbulance(b.ambRequestId);
   save();
+}
+// Patients booked at other hospitals move along that hospital's projected queue: waiting → with a
+// doctor → done, so they leave the Reception list when they've been seen.
+function syncOtherHospitals(t = Date.now()) {
+  let changed = false;
+  S.patients.filter((p) => !isSelfPatient(p) && (p.status === "waiting" || p.status === "in_consultation")).forEach((p) => {
+    const b = S.bookings.find((x) => x.patientId === p.id);
+    if (!b) return;
+    const st = bookingStatus(b, t);
+    if (st.state === "called" && p.status === "waiting") { p.status = "in_consultation"; p.called = t; p.wait_s = (t - p.arrived) / 1000; changed = true; }
+    else if (st.state === "completed") { p.status = "completed"; p.completed = t; p.called = p.called || t; changed = true; }
+  });
+  return changed;
 }
 
 // ------------------------------------------------------------------ ambulance (SJF)
