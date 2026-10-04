@@ -7,7 +7,8 @@ human-readable reasons. The AI second opinion (llm.py) can only raise the level.
 from __future__ import annotations
 
 import re
-from typing import Any, Dict, List, Optional
+from functools import lru_cache
+from typing import Any, Dict, List, Optional, Tuple
 
 LEVELS = ("critical", "high", "medium", "low")
 LEVEL_ORDER = {lvl: i for i, lvl in enumerate(LEVELS)}   # lower index = more urgent
@@ -129,6 +130,8 @@ DEFAULT_CONDITIONS: List[Dict[str, Any]] = [
                   "medical certificate", "vaccination"]},
 ]
 
+from .denial import DENIAL_STEMS  # noqa: E402
+
 # Tamil and Tanglish words for every condition (medos/triage_tamil.py).
 from .triage_tamil import TAMIL_NEGATION, merged as _with_tamil  # noqa: E402
 
@@ -160,35 +163,91 @@ def _negated(text: str, start: int, end: Optional[int] = None) -> bool:
     return end is not None and bool(TAMIL_NEG.search(text[end:end + 24]))
 
 
-def _find_phrase(text: str, phrase: str) -> Optional[int]:
-    """Position of `phrase` as whole words (plural/tense endings allowed) that is not negated.
+@lru_cache(maxsize=8192)
+def _phrase_re(phrase: str) -> "re.Pattern[str]":
+    """Compiled once per keyword. With the Tamil words there are more patterns than Python's own regex cache
+    holds (512), which made every analysis recompile them (~0.2 s per patient)."""
+    if phrase.endswith("*"):
+        return re.compile(WORD_START + re.escape(phrase[:-1]) + r"[a-z஀-௿]*")
+    return re.compile(WORD_START + re.escape(phrase) + r"(?:s|es|d|ed|ing)?(?![a-z0-9])")
 
-    A trailing '*' makes the phrase a prefix: 'dehydrat*' matches dehydrated, dehydration.
+
+def _find_phrase_span(text: str, phrase: str, tamil_after: bool = True) -> Optional[Tuple[int, int]]:
+    """(start, end) of `phrase` as whole words (plural/tense endings allowed) that is not negated.
+
+    A trailing '*' makes the phrase a prefix: 'dehydrat*' matches dehydrated, dehydration (the span runs to the
+    end of the word, as on the website). tamil_after=False skips the Tamil negation that follows a phrase — a
+    multi-part keyword checks that once, after its last part.
     """
     phrase = phrase.strip()
     if not phrase:
         return None
-    if phrase.endswith("*"):
-        pattern = WORD_START + re.escape(phrase[:-1])
-    else:
-        pattern = WORD_START + re.escape(phrase) + r"(?:s|es|d|ed|ing)?(?![a-z0-9])"
-    for m in re.finditer(pattern, text):
-        if not _negated(text, m.start(), m.end()):
-            return m.start()
+    for m in _phrase_re(phrase).finditer(text):
+        if not _negated(text, m.start(), m.end() if tamil_after else None):
+            return m.start(), m.end()
     return None
 
 
+def _find_phrase(text: str, phrase: str) -> Optional[int]:
+    span = _find_phrase_span(text, phrase)
+    return span[0] if span else None
+
+
 def keyword_matches(text: str, keyword: str) -> bool:
-    """A keyword is a phrase, or phrases joined by '+' that must share a sentence."""
+    """A keyword is a phrase, or phrases joined by '+' that must share a sentence.
+
+    Tamil puts negation after the whole phrase ("நெஞ்சு வலி இல்லை" = no chest pain), so for a multi-part
+    keyword it is checked once, after the last part — not after each part, which would wrongly read
+    "ரத்தம் நிற்கவே இல்லை" (bleeding won't stop) as "no bleeding"."""
     parts = [p.strip() for p in keyword.lower().split("+") if p.strip()]
     if not parts:
         return False
     if len(parts) == 1:
         return _find_phrase(text, parts[0]) is not None
     for sentence in SENTENCE_SPLIT.split(text):
-        if all(_find_phrase(sentence, p) is not None for p in parts):
-            return True
+        spans = [_find_phrase_span(sentence, p, tamil_after=False) for p in parts]
+        if all(spans):
+            last_end = max(end for _, end in spans)
+            if not TAMIL_NEG.search(sentence[last_end:last_end + 24]):
+                return True
     return False
+
+
+def _keyword_present(text: str, keyword: str) -> bool:
+    """Whether a keyword occurs at all, negated or not (a multi-part keyword: all parts in one sentence)."""
+    parts = [p.strip() for p in keyword.lower().split("+") if p.strip()]
+    if not parts:
+        return False
+    if len(parts) == 1:
+        return _phrase_re(parts[0]).search(text) is not None
+    return any(all(_phrase_re(p).search(sentence) for p in parts) for sentence in SENTENCE_SPLIT.split(text))
+
+
+def condition_denied(text: str, condition_name: str, conditions: Optional[List[Dict[str, Any]]] = None) -> bool:
+    """True when the text names this condition (one of its keywords) only to deny it: "no chest pain",
+    "நெஞ்சு வலி இல்லை". The ML model uses this so it never acts on a symptom the patient said they do NOT have."""
+    text = normalise(text)
+    cond = next((c for c in (conditions if conditions is not None else DEFAULT_CONDITIONS) if c["name"] == condition_name), None)
+    if cond is None:
+        return False
+    kws = cond["keywords"]
+    if isinstance(kws, str):
+        kws = kws.split(",")
+    mentioned = False
+    for kw in kws:
+        if not kw.strip():
+            continue
+        if keyword_matches(text, kw):
+            return False                  # affirmed somewhere in the text
+        if _keyword_present(text, kw):
+            mentioned = True
+    # The protocol keywords are phrases ("heavy bleeding"); the simple stems catch "no bleeding" too.
+    for stem in DENIAL_STEMS.get(condition_name, ()):
+        for m in _phrase_re(stem).finditer(text):
+            if not _negated(text, m.start(), m.end()):
+                return False              # the symptom is mentioned, and not denied
+            mentioned = True
+    return mentioned
 
 
 def parse_temperature_f(text: str) -> Optional[float]:

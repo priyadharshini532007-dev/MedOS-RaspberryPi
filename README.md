@@ -127,7 +127,7 @@ No laptop? `curl -fsSL https://ollama.com/install.sh | sh` on the Pi, then `olla
 
 While you speak, the words appear live. Recording continues until you press **Stop**, and you can pause and resume. Then Qwen (or the built-in parser if Qwen is offline) fills in name, age, sex, phone and symptoms for the receptionist to confirm.
 
-**Tamil.** Press **தமிழ்** next to the voice button to speak Tamil; English words mixed in are fine. The browser writes Tamil in Tamil script, and the triage rules understand Tamil and Tanglish symptoms (`medos/triage_tamil.py`: நெஞ்சு வலி, மூச்சு திணறல், பாம்பு கடி, காய்ச்சல், "nenju vali"…), including Tamil negation ("நெஞ்சு வலி இல்லை" = no chest pain). The parser picks up "என் பெயர் கவிதா, 34 வயசு". Tamil needs the browser microphone ("This mic, browser"); the offline Pi microphone models are English-only. The machine-learning model is English-only too, so for Tamil it stays silent and the rules decide.
+**Tamil.** Press **தமிழ்** next to the voice button to speak Tamil; English words mixed in are fine. The browser writes Tamil in Tamil script, and the triage rules understand Tamil and Tanglish symptoms (`medos/triage_tamil.py`: நெஞ்சு வலி, மூச்சு திணறல், பாம்பு கடி, காய்ச்சல், "nenju vali"…), including Tamil negation ("நெஞ்சு வலி இல்லை" = no chest pain). The parser picks up "என் பெயர் கவிதா, 34 வயசு" and spoken forms like "என்னோட பேரு கிருத்திகா எனக்கு பதினெட்டு வயசு". Tamil needs the browser microphone ("This mic, browser"); the offline Pi microphone models are English-only. The trained machine-learning model reads Tamil, Tanglish and Tamil-English mixed speech too (below).
 
 ---
 
@@ -146,7 +146,7 @@ defaults:   aging 5 points/minute, limit 450, re-ordered every 15 s
 
 - **Rank** comes from the priority table in the proposal (1 = severe abdominal pain … 15 = routine check-up). Ten red flags sit above it at rank 0 and are always Critical: chest pain, breathing difficulty, stroke signs, unconscious, severe bleeding, seizure, anaphylaxis, major trauma, poisoning or snake bite, severe burns. The table is editable in *Admin → Triage protocol*.
 - **Vital signs** can raise the level on their own: SpO₂ < 90 %, pulse ≥ 130 or ≤ 40, or systolic BP < 90 is Critical.
-- **Machine learning** gives a second opinion on every registration. A logistic-regression model trained on a synthetic triage dataset (`ml/`) predicts the level from the symptoms and vital signs; when it is at least 75 % confident that the case is more urgent than the rules said, the level is raised. It can never lower a priority. On held-out synthetic patients, rules alone are 75.8 % accurate and rules + model 96.8 % (critical recall 67 % → 98 %). See `ml/README.md` for the dataset, training and the honest limits.
+- **Machine learning** gives a second opinion on every registration, in English, Tamil and Tanglish. A model trained on a synthetic triage dataset (`ml/`, 18,000 rows) predicts the priority and the condition (so the department) from the words and vital signs. It may only **raise** a priority, never lower one; it acts at lower confidence for emergencies than for minor conditions; and it never acts on a symptom the patient denies ("no chest pain", "நெஞ்சு வலி இல்லை"). On 89 fresh sentences written separately from the training data, rules alone were 59.6 % right and rules + model 98.9 % (all 36 emergencies caught); on wording it had never seen it is much weaker (84.2 %, 66 % of emergencies). See `ml/README.md` for the data, the training, and the honest limits.
 - **Aging** lets a Low case waiting about 70 minutes pass a newly arrived Medium case. Critical can never be overtaken: the best High score plus every modifier plus the full aging limit is still below the lowest Critical score.
 - **Dispatch**: whenever a doctor finishes or becomes available, the head of the ready queue goes to the doctor who has been idle longest.
 - **Waiting-time estimate**: a small multi-server simulation of the queue against each doctor's expected finish time, using the average consultation length per level, learned from today's finished consultations.
@@ -188,7 +188,10 @@ run.py                  start the server (python run.py --port 8080 [--https])
 medos/
   scheduler.py          dynamic priority scheduler, aging daemon, dispatch, pre-emption, ETA
   triage.py             rules engine + the priority table
-  ml_triage.py          machine-learning priority model (inference; trained in ml/)
+  ml_triage.py          machine-learning triage: priority + condition (inference; trained in ml/)
+  checkin.py            turns what a patient says into fields: one sentence, or the three guided answers
+  triage_tamil.py       Tamil and Tanglish symptom words for every condition
+  denial.py             stems that tell when a patient denies a symptom
   models/               the trained model (triage_model.json)
   llm.py                Qwen 3 via Ollama, AI worker thread, network discovery
   voice.py              Vosk speech recognition, USB mic, spoken-form parser

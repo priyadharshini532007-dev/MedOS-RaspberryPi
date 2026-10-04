@@ -64,9 +64,11 @@ function restates(a, b) {
   const wa = wordsOf(a), wb = wordsOf(b);
   if (!wa.length || !wb.length) return false;
   const n = Math.min(wa.length, wb.length);
+  // the last word of the shorter text may still be growing ("hi" → "high"), so a prefix counts as the same word
+  const sameWord = (i) => wa[i] === wb[i] || (i === n - 1 && Math.min(wa[i].length, wb[i].length) >= 2 && (wa[i].startsWith(wb[i]) || wb[i].startsWith(wa[i])));
   let same = 0;
-  for (let i = 0; i < n; i++) if (wa[i] === wb[i]) same++;
-  return wa[0] === wb[0] && same >= Math.max(1, Math.ceil(n * 0.6));
+  for (let i = 0; i < n; i++) if (sameWord(i)) same++;
+  return sameWord(0) && same >= Math.max(1, Math.ceil(n * 0.6));
 }
 export function mergeResults(results, cumulative = IS_ANDROID) {
   const parts = [];

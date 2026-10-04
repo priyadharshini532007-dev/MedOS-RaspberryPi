@@ -144,11 +144,17 @@ function renderTriage(t) {
 // Machine-learning model's opinion (medos/ml_triage.py): probability per level, and whether it raises the level.
 function mlHtml(t) {
   const m = t.ml;
+  // It doesn't know what this complaint is: say so rather than show a priority it has no basis for.
+  if (m.condition_confidence < 0.25 && m.confidence < 0.85) {
+    return `<div class="ml-box mt-8"><div class="ml-title">${icon("cpu")}ML model: not sure what this means yet</div>
+      <p class="t-small mt-4">The rules decide the priority. A few more words (what hurts, since when) and it will try again.</p></div>`;
+  }
   const bars = LEVELS.map((l) => `<div class="ml-bar"><span>${LEVEL_LABEL[l]}</span><i><b style="width:${Math.round((m.probabilities[l] || 0) * 100)}%;background:var(--${{ critical: "crit", high: "high", medium: "med", low: "low" }[l]})"></b></i><em>${Math.round((m.probabilities[l] || 0) * 100)}%</em></div>`).join("");
   const verdict = t.ml_upgrade ? `<b>Raises the priority to ${LEVEL_LABEL[t.ml_upgrade]}</b> when registered (confident, and higher than the rules).`
     : m.level === t.level ? "Agrees with the rules." : LEVELS.indexOf(m.level) > LEVELS.indexOf(t.level) ? "Rates it lower — the model can never lower a priority, so the rules level stays."
     : "Rates it higher but isn't confident enough (needs 75%), so the rules level stays.";
   return `<div class="ml-box mt-8"><div class="ml-title">${icon("cpu")}ML model: ${LEVEL_LABEL[m.level]} · ${Math.round(m.confidence * 100)}% confident</div>
+    ${t.ml_condition ? `<p class="t-small mt-4"><b>Understood as:</b> ${esc(t.ml_condition)} <span class="muted">· ${esc(m.department)} · ${Math.round(m.condition_confidence * 100)}%</span></p>` : ""}
     <div class="ml-bars">${bars}</div>
     <p class="t-small mt-4">${verdict}${m.top_terms && m.top_terms.length ? ` <span class="muted">Key words: ${m.top_terms.map(esc).join(", ")}.</span>` : ""}</p></div>`;
 }

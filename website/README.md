@@ -9,6 +9,7 @@ The website version of MedOS. It works on desktop and phone, needs no build step
 | **Book an ambulance** `#/patient/ambulance` | Hold-for-SOS, nearest free ambulance, hospitals ranked by *time to treatment* (SJF), ambulance → you → hospital route |
 | **Track** `#/track/<code>` | Token: position, wait, "leave in N min" advice, alert when close. Ambulance: live animated ambulance on the route, trip phases |
 | **Reception** `#/reception` | Register by typing or voice, live triage with highlighted keywords, priority queue with aging bars, emergency hold-button, token slip with QR |
+| **Three-question voice check-in** (Book a token, Reception) | Asks **name**, then **age**, then **the problem**, one at a time, in English or தமிழ் — each answer fills only its own field, so nothing gets mixed up. Tamil is understood by a trained model and shown in English; a "Ready to book" card then recommends the hospital |
 | **Voice intake** `#/voice` | Every spoken input recorded (transcript, extracted fields, audio clip) and listed in priority order |
 | **Doctor**, **Pharmacy** (FCFS), **Ambulance desk**, **Waiting-room display**, **Admin** | As in the Pi version |
 | **Scheduler Lab**, **How it works** | FCFS vs SJF vs priority vs aging vs pre-emption, and the OS concepts |
@@ -55,4 +56,4 @@ js/pages-*.js         the pages
 js/app.js             router, alarm bar
 ```
 
-Voice recognition uses the browser's Web Speech API (Chrome, Edge, Safari). Firefox has none, so type there instead. Press **தமிழ்** in the voice box to speak Tamil, with English words mixed in if you like; the choice is remembered. Triage understands Tamil and Tanglish symptoms (`js/triage_tamil.js`, generated from `medos/triage_tamil.py` by `python -m medos.triage_tamil`). MedOS is a teaching prototype, not a certified medical device.
+Voice recognition uses the browser's Web Speech API (Chrome, Edge, Safari). Firefox has none, so type there instead. Press **தமிழ்** in the voice box to speak Tamil, with English words mixed in if you like; the choice is remembered. Triage understands Tamil and Tanglish symptoms (`js/triage_tamil.js` and `js/denial.js`, generated from `medos/triage_tamil.py` and `medos/denial.py` by `python -m medos.triage_tamil` and `python -m medos.denial`). The voice check-in asks the three questions aloud when the device has a voice for the language, and never listens while it is speaking. A trained ML model (`ml/triage_model.js`, fetched in the background, about 1 MB) understands the Tamil complaint, so it can pick the right department and explain it in English even when the free online translator is wrong or offline. MedOS is a teaching prototype, not a certified medical device.

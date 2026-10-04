@@ -1,0 +1,90 @@
+text,lang,condition,priority
+"my husband is clutching his chest and says it feels like a belt tightening around him",en,Chest pain / suspected heart attack,critical
+"pain going down my left arm and I feel sick and sweaty",en,Chest pain / suspected heart attack,critical
+"she's turning blue and gasping, I think she's choking",en,Breathing difficulty,critical
+"he can only say a few words before he has to stop for air",en,Breathing difficulty,critical
+"my mother's face has dropped on the left and her speech is all muddled",en,Stroke signs,critical
+"grandpa collapsed in the garden and won't open his eyes",en,Unconscious / collapsed,critical
+"the cut on his leg is pumping blood and the bandage is soaked",en,Severe bleeding,critical
+"my brother started shaking all over and his eyes rolled back",en,Seizure,critical
+"after the injection her throat feels like it is closing and her face is puffy",en,Severe allergic reaction,critical
+"my son fell off the roof about ten feet onto concrete",en,Major trauma,critical
+"our toddler drank some of the weedkiller from the shed",en,Poisoning / bite / overdose,critical
+"something bit me in the garden and my leg is swelling fast, I think it was a snake",en,Poisoning / bite / overdose,critical
+"hot water from the kettle spilled down his chest and arm, the skin is blistered",en,Severe burns / electric shock,critical
+"terrible cramping pain low on the right side and it hurts to walk",en,Severe abdominal pain,high
+"I slipped on the stairs and my wrist is bent in a strange shape",en,Fracture,high
+"burning up at 104 with the shakes since last night",en,High fever (>102°F),high
+"throbbing head on the left with nausea, bright lights make it worse",en,Severe migraine/headache,medium
+"I have been sick all day and can't hold any food or fluids",en,Persistent vomiting,medium
+"my asthma is playing up, bit wheezy and tight but I can still talk",en,Asthma attack (mild),medium
+"productive cough with green phlegm and a temperature for five days",en,Chest infection,medium
+"stiff and sore lower back after gardening",en,Back pain,low
+"upset tummy and a bit of cramping after lunch",en,Stomach pain (mild),low
+"my little girl keeps tugging at her ear and was crying last night",en,Ear pain,low
+"throat is sore and swallowing hurts a bit",en,Sore throat,low
+"red itchy patches on both arms since yesterday",en,Skin allergy/rash,low
+"blocked nose, sneezing and a mild cough",en,Cold & cough,low
+"feeling a bit warm and achy, probably a mild fever",en,Mild fever,low
+"just here for my regular diabetes review",en,Routine check-up,low
+"no chest pain, just a tickly cough since Monday",en,Cold & cough,low
+"I feel run down and have no energy lately",en,Unclassified complaint,low
+"என் கணவருக்கு நெஞ்சை பிழியிற மாதிரி வலிக்குது, வேர்த்து கொட்டுது",ta,Chest pain / suspected heart attack,critical
+"இடது கையில வலி இறங்குது, நெஞ்சும் அடைக்கிற மாதிரி இருக்கு",ta,Chest pain / suspected heart attack,critical
+"குழந்தைக்கு மூச்சு திணறி உதடு நீலமாயிடுச்சு",ta,Breathing difficulty,critical
+"அப்பாவால பேசவே முடியல, வாய் இழுத்துக்கிச்சு, ஒரு கை வராது",ta,Stroke signs,critical
+"தோட்டத்துல மயங்கி விழுந்துட்டாங்க, கூப்பிட்டா எழுந்திருக்கல",ta,Unconscious / collapsed,critical
+"கத்தி பட்டு கை அறுந்து ரத்தம் பீச்சி அடிக்குது",ta,Severe bleeding,critical
+"தம்பிக்கு வலிப்பு வந்து கண்ணு மேல போயிடுச்சு",ta,Seizure,critical
+"மாத்திரை சாப்பிட்ட அப்புறம் முகம் எல்லாம் வீங்கி தொண்டை அடைக்குது",ta,Severe allergic reaction,critical
+"டூவீலர்ல இருந்து தூக்கி வீசப்பட்டு தலையில பலமா அடி",ta,Major trauma,critical
+"குழந்தை சுத்தம் பண்ற திரவத்தை குடிச்சுடுச்சு",ta,Poisoning / bite / overdose,critical
+"வயல்ல பாம்பு கடிச்சுடுச்சு, கால் வீங்கிட்டே போகுது",ta,Poisoning / bite / overdose,critical
+"அடுப்புல இருந்த சுடு எண்ணெய் மேல கொட்டி தோல் எல்லாம் உரிஞ்சுடுச்சு",ta,Severe burns / electric shock,critical
+"அடிவயிறு வலது பக்கம் தாங்கவே முடியல, நடக்க கூட முடியல",ta,Severe abdominal pain,high
+"விழுந்ததுல கை வளைஞ்சு போயிடுச்சு, வீங்கிடுச்சு",ta,Fracture,high
+"நேத்துல இருந்து உடம்பு கொதிக்குது, குளிர்ல நடுங்குது, 104 இருக்கு",ta,High fever (>102°F),high
+"தலைவலி ஒரு பக்கம் துடிக்குது, வாந்தி வர மாதிரி இருக்கு, வெளிச்சம் பிடிக்கல",ta,Severe migraine/headache,medium
+"நாள் முழுக்க வாந்தி, எதுவும் உள்ள போகல",ta,Persistent vomiting,medium
+"ஆஸ்துமா இருக்கு, இழுப்பு கொஞ்சம் அதிகம், பேச முடியுது",ta,Asthma attack (mild),medium
+"அஞ்சு நாளா இருமல், பச்சை கலர்ல சளி, காய்ச்சல்",ta,Chest infection,medium
+"தூக்கி வெச்சதுல இருந்து முதுகு பிடிச்சுக்கிச்சு",ta,Back pain,low
+"சாப்பிட்டதுக்கு அப்புறம் வயிறு கனமா இருக்கு, லேசா வலி",ta,Stomach pain (mild),low
+"பையன் காது வலின்னு அழறான்",ta,Ear pain,low
+"தொண்டை வலி, எச்சில் முழுங்கும்போது வலிக்குது",ta,Sore throat,low
+"கால்ல சிவப்பா அரிக்குது, சொறி மாதிரி இருக்கு",ta,Skin allergy/rash,low
+"மூக்கு அடைச்சிருக்கு, தும்மல், லேசான இருமல்",ta,Cold & cough,low
+"லேசா சுரம் மாதிரி இருக்கு, உடம்பு அசதி",ta,Mild fever,low
+"மாசாந்திர சுகர் செக்கப்புக்கு வந்தேன்",ta,Routine check-up,low
+"நெஞ்சு வலி இல்ல, ஆனா இருமல் இருக்கு",ta,Cold & cough,low
+"உடம்புக்கு என்னமோ சரியில்ல, ரொம்ப சோர்வு",ta,Unclassified complaint,low
+"எனக்கு chest pain வருது, ரொம்ப sweat ஆகுது",ta,Chest pain / suspected heart attack,critical
+"அவருக்கு breathing problem, மூச்சு விட முடியல",ta,Breathing difficulty,critical
+"stomach pain ரொம்ப இருக்கு, தாங்க முடியல",ta,Severe abdominal pain,high
+"fever இருக்கு, body pain, லேசா தான்",ta,Mild fever,low
+"headache இருக்கு, ஒரு பக்கம் மட்டும், vomiting வருது",ta,Severe migraine/headache,medium
+"cold, cough, தும்மல் இருக்கு",ta,Cold & cough,low
+"BP check பண்ணணும், medicine முடிஞ்சுது",ta,Routine check-up,low
+"snake bite ஆயிடுச்சு, கால் வீங்குது",ta,Poisoning / bite / overdose,critical
+"accident ஆயிடுச்சு, தலையில அடி",ta,Major trauma,critical
+"nenju pidichu valikkuthu, vervai kotuthu",tl,Chest pain / suspected heart attack,critical
+"amma ku moochu thinari udhadu neelama aagiduchu",tl,Breathing difficulty,critical
+"appa vaai konal aagiduchu, pesa mudiyala",tl,Stroke signs,critical
+"thaatha mayangi vizhunthutaaru, eluppi paathaalum ezhunthirikkala",tl,Unconscious / collapsed,critical
+"kaila kaayam, ratham kottitte irukku",tl,Severe bleeding,critical
+"paiyanuku valippu vanthu kai kaal udharuthu",tl,Seizure,critical
+"paambu kadichiduchu, kaal veengitte pogudhu",tl,Poisoning / bite / overdose,critical
+"adivayiru right side thaanga mudiyala",tl,Severe abdominal pain,high
+"kai elumbu odanjiduchu, veengiduchu",tl,Fracture,high
+"romba kaichal, udambu nadunguthu",tl,High fever (>102°F),high
+"orupakkam thalai thudikkuthu, vaanthi varra maathiri irukku",tl,Severe migraine/headache,medium
+"vaanthi nikkala, onnume ulla pogala",tl,Persistent vomiting,medium
+"irumal, pachai kalar sali, kaichal",tl,Chest infection,medium
+"muthugu pidichukkiduchu",tl,Back pain,low
+"vayiru konjam valikkuthu saaptathukku apparam",tl,Stomach pain (mild),low
+"kaathu vali, paiyan azhuran",tl,Ear pain,low
+"thondai vali, mizhunga kashtama irukku",tl,Sore throat,low
+"kaal la arippu, sori maathiri",tl,Skin allergy/rash,low
+"mookku adaichiruku, thummal",tl,Cold & cough,low
+"lesa kaichal, udambu asathi",tl,Mild fever,low
+"sugar checkup ku vanthen",tl,Routine check-up,low

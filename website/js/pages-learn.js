@@ -183,23 +183,25 @@ defaults:   aging 5 points/minute, limit 450</pre>
           <p style="margin-top:8px">Here, the hold-to-confirm emergency buttons and Admin → Simulate button press do the same job.</p></div></section>
       </div>
       <p class="t-xs muted" style="margin-top:20px">MedOS is a decision-support prototype for teaching and demonstration. It isn't a certified medical device. In an emergency in India, call 108.</p></div>`;
+    // The model file loads in the background: fill in its card as soon as it has arrived.
+    if (!ML.available) ML.ready.then(() => { if (el.isConnected) PAGES.about.render(el); });
   },
 };
 
-// Machine-learning priority model: what it is and how well it does (numbers come from the trained model).
+// Machine-learning triage model: what it is and how well it does (numbers come from the trained model).
 function mlAboutCard() {
   if (!ML.available) return "";
   const m = ML.metrics, pct = (x) => (x * 100).toFixed(1) + "%";
-  return `<section class="card" style="margin-top:16px"><div class="card-head"><h2 class="t-h3">${icon("cpu")}Machine-learning priority model</h2><span class="pill">Trained on synthetic data</span></div>
+  return `<section class="card" style="margin-top:16px"><div class="card-head"><h2 class="t-h3">${icon("cpu")}Machine-learning triage</h2><span class="pill">English · Tamil · Tanglish</span></div>
     <div class="card-body stack-sm t-small muted-2">
-      <p>Alongside the rules, a trained model reads the symptoms and vital signs and predicts the priority. It is a multinomial logistic regression on TF-IDF word features plus standardised vitals, trained with scikit-learn (<code>ml/train.py</code>) on ${m.train_rows.toLocaleString()} rows of a synthetic dataset generated from the triage protocol (<code>ml/data/triage_synthetic.csv</code>). The same trained numbers run here in your browser and on the Raspberry Pi.</p>
-      <p><b>How it is used:</b> the rules decide first. The model may only <b>raise</b> a priority, and only when it is at least 75% confident — it can never push a patient down the queue. You can see its opinion in the Reception preview and on the booking page.</p>
-      <div class="table-wrap"><table class="tbl"><thead><tr><th>Tested on ${m.test_rows.toLocaleString()} held-out patients</th><th class="r">Accuracy</th></tr></thead><tbody>
-        <tr><td>Rules engine alone</td><td class="r num">${pct(m.rules_accuracy)}</td></tr>
-        <tr><td>ML model alone</td><td class="r num">${pct(m.accuracy)}</td></tr>
-        <tr><td><b>Rules + ML upgrade (what MedOS uses)</b></td><td class="r num"><b>${pct(m.combined_accuracy)}</b></td></tr>
-        <tr><td>Phrasings never seen in training — rules alone / rules + ML</td><td class="r num">${pct(m.unseen_phrasing_rules_accuracy)} / ${pct(m.unseen_phrasing_combined_accuracy)}</td></tr>
+      <p>A model trained on ${m.train_rows.toLocaleString()} synthetic cases (<code>ml/data/triage_synthetic.csv</code>, generated from the triage protocol in English, Tamil, Tanglish and Tamil-English mixed speech) reads what the patient said and predicts two things: the <b>priority</b> and the <b>condition</b> — and so the department. It uses words, word pairs and word pieces (so Tamil word endings and misspellings still match) plus vital signs.</p>
+      <p><b>How it is used:</b> the rules decide first. The model may only <b>raise</b> a priority — never lower one — and only when it is sure (less sure is enough for emergencies, more for minor conditions). It never acts on a symptom the patient denies (“no chest pain”, “நெஞ்சு வலி இல்லை”). The condition it understands picks the department when you book, so a Tamil complaint reaches the right specialist.</p>
+      <div class="table-wrap"><table class="tbl"><thead><tr><th>Priority accuracy</th><th class="r">Rules alone</th><th class="r">Rules + ML (MedOS)</th></tr></thead><tbody>
+        <tr><td>${m.realworld_rows} fresh sentences, written separately (held out)</td><td class="r num">${pct(m.realworld_rules_accuracy)}</td><td class="r num"><b>${pct(m.realworld_combined_accuracy)}</b></td></tr>
+        <tr><td>${m.test_rows.toLocaleString()} held-out synthetic cases</td><td class="r num">${pct(m.rules_accuracy)}</td><td class="r num"><b>${pct(m.combined_accuracy)}</b></td></tr>
+        <tr><td>Wording never seen in training (the hard test)</td><td class="r num">${pct(m.unseen_phrasing_rules_accuracy)}</td><td class="r num"><b>${pct(m.unseen_phrasing_combined_accuracy)}</b></td></tr>
       </tbody></table></div>
-      <p class="t-xs muted">Synthetic data shows the method works; it is not clinical validation. Full report: <code>ml/reports/metrics.md</code>.</p>
+      <p><b>Understanding the complaint:</b> it names the right condition for ${pct(m.realworld_condition_accuracy)} of the fresh sentences and the right department for ${pct(m.realworld_department_accuracy)}. Emergencies caught on the fresh sentences: ${pct(m.realworld_critical_recall)}.</p>
+      <p class="t-xs muted"><b>Honest limits.</b> The data is synthetic, so this shows the method works; it is not clinical validation. On wording the model has never seen it is much weaker (see the last row), which is why it is a second opinion next to the rules and staff, not a replacement. The fresh sentences were written before the final round of tuning; the earlier, cleaner run scored 95.5% with one critical case missed. Full report: <code>ml/reports/metrics.md</code>.</p>
     </div></section>`;
 }

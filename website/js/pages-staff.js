@@ -16,7 +16,7 @@ function queueRows(q, eta, { actions = false, showHosp = false, fresh = new Set(
     return `<div class="qrow ${fresh.has(p.id) ? "flash" : ""}" data-pid="${p.id}">
     <span class="pos">${p.position}</span>${tokenChip(p.token, p.level)}
     <span class="who"><b>${esc(p.name || "Unnamed")} ${fresh.has(p.id) ? `<span class="pill brand">New</span>` : ""}${p.emergency ? `<span class="pill bad">${icon("siren")}Emergency</span>` : ""}${p.preempted ? `<span class="pill warn">Resumes next</span>` : ""}${p.voiceId ? `<span class="pill info" title="Registered by voice">${icon("mic")}</span>` : ""}</b>
-      ${p.symptomsEn ? `<small class="q-en" lang="en" title="${esc(p.symptoms)}">${icon("send")}“${esc(p.symptomsEn)}”</small>` : ""}
+      ${isTamilText(p.symptoms) && (p.mlCondition || p.symptomsEn) ? `<small class="q-en" lang="en" title="${esc(p.symptoms)}${p.symptomsEn ? " — machine translation: " + esc(p.symptomsEn) : ""}">${icon("send")}${p.mlCondition ? esc(p.mlCondition) : "“" + esc(p.symptomsEn) + "”"}</small>` : ""}
       <small>${showHosp ? `<b class="hosp-tag" data-self="${h.self ? 1 : 0}">${esc(h.short)}${p.hospPosition ? " #" + p.hospPosition : ""}</b> · ` : ""}${esc(ageSex(p))}${ageSex(p) ? " · " : ""}${esc(p.primary)} · ${esc(p.source)}</small></span>
     <span class="lvl">${prio(p.level)}${priorityBar(p)}</span>
     <span class="eta"><b>${eta[p.id] == null ? "—" : fmtMin(eta[p.id])}</b><span class="muted">waited ${fmtMin((Date.now() - p.arrived) / 60000)}</span>
@@ -60,6 +60,9 @@ PAGES.reception = {
           <section class="card">
             <div class="card-head"><h2 class="t-h3">${icon("plus")}Register a patient</h2><span id="tri"></span></div>
             <div class="card-body stack">
+              <div class="row-between"><span class="label">${icon("mic")}Voice check-in</span>
+                <div class="seg seg-sm" id="vmode" role="group" aria-label="How to take the voice check-in">
+                  <button type="button" data-m="three">3 questions</button><button type="button" data-m="one">One sentence</button></div></div>
               <div id="vbox"></div>
               <form id="rform" class="form-grid" autocomplete="off">
                 <label class="field c6"><span>Symptoms</span><textarea class="textarea" name="symptoms" required placeholder="What brings them in?"></textarea></label>
@@ -102,14 +105,35 @@ PAGES.reception = {
       </div></div>`;
     const form = $("#rform", el);
     let voiceId = null;
-    mountVoice($("#vbox", el), { source: "reception", onResult: (r) => {
-      const v = addVoiceInput({ transcript: r.text, fields: r.fields, source: "reception", audioId: r.audioId, durationS: r.durationS, lang: r.lang });
-      voiceId = v.id;
-      ["name", "age", "sex", "phone", "symptoms"].forEach((k) => { if (r.fields[k]) form.elements[k].value = r.fields[k]; });
-      if (r.fields.pregnant) form.pregnant.checked = true;
-      preview();
-    } });
     let en = null, enAsked = null;   // English translation of Tamil symptoms: {text, source, for}
+    // Voice: three questions (name, age, problem — one answer per field, nothing mixed up) or one free sentence.
+    let vmode = store("medos.reception.voicemode") || "three", vctl = null;
+    const mountVoiceBox = () => {
+      if (vctl && vctl.stop) vctl.stop();
+      $$("#vmode button", el).forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.m === vmode)));
+      $("#vbox", el).innerHTML = "";
+      $("#vbox", el).className = "";
+      if (vmode === "three") {
+        vctl = mountGuidedVoice($("#vbox", el), { source: "reception", onDone: (r) => {
+          const v = addVoiceInput({ transcript: r.transcripts.problem || r.symptoms, fields: { name: r.name, age: r.age, symptoms: r.symptoms },
+            source: "reception (3 questions)", audioId: r.audioId, durationS: r.durationS, lang: r.lang });
+          voiceId = v.id;
+          form.name.value = r.name || ""; form.age.value = r.age == null ? "" : String(r.age); form.symptoms.value = r.symptoms || "";
+          if (r.symptomsEn) { en = { text: r.symptomsEn, source: r.translationSource, for: form.symptoms.value.trim() }; enAsked = en.for; }
+          preview();
+        } });
+      } else {
+        vctl = mountVoice($("#vbox", el), { source: "reception", onResult: (r) => {
+          const v = addVoiceInput({ transcript: r.text, fields: r.fields, source: "reception", audioId: r.audioId, durationS: r.durationS, lang: r.lang });
+          voiceId = v.id;
+          ["name", "age", "sex", "phone", "symptoms"].forEach((k) => { if (r.fields[k]) form.elements[k].value = r.fields[k]; });
+          if (r.fields.pregnant) form.pregnant.checked = true;
+          preview();
+        } });
+      }
+    };
+    $("#vmode", el).addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b || b.dataset.m === vmode) return; vmode = b.dataset.m; store("medos.reception.voicemode", vmode); mountVoiceBox(); });
+    mountVoiceBox();
     const enFor = (sym) => (en && en.for === sym && en.text ? en : null);
     const data = () => {
       const sym = form.symptoms.value, tr = enFor(sym);
@@ -126,22 +150,27 @@ PAGES.reception = {
       }
       if (!d.symptoms.trim()) { $("#preview", el).innerHTML = ""; $("#tri", el).innerHTML = ""; return; }
       const vit = Object.fromEntries(Object.entries(d.vitals).filter(([, v]) => v !== ""));
-      const t = analyse(d.symptoms + (d.symptomsEn ? ". " + d.symptomsEn : ""), d.age, vit, d.pregnant);
+      const t0 = analyse(d.symptoms + (d.symptomsEn ? ". " + d.symptomsEn : ""), d.age, vit, d.pregnant);
+      // the level registration will use: the rules, raised by the model when it is confident (never lowered)
+      const pred = ML.predict(d.symptomsEn || d.symptoms, d.age, vit, d.pregnant);
+      const allText = d.symptoms + (d.symptomsEn ? ". " + d.symptomsEn : "");
+      const up = ML.upgrade(t0.level, pred, allText);
+      const t = up ? { ...t0, level: up, base_score: baseScore(up, up === "critical" ? 0 : t0.rank, t0.bonus) } : t0;
       $("#tri", el).innerHTML = prio(t.level);
       const ahead = readyQueue().filter((p) => p.score.total >= t.base_score).length;
-      $("#preview", el).innerHTML = `<div class="why" style="border-color:${LEVEL_COLOR[t.level]}"><div class="row-between"><b>${esc(t.primary_condition)}</b><span class="t-small muted">score ${Math.round(t.base_score)} · ${esc(t.department)}</span></div>
+      $("#preview", el).innerHTML = `<div class="why" style="border-color:${LEVEL_COLOR[t.level]}"><div class="row-between"><b>${esc(up && ML.confidentCondition(pred, allText) ? ML.confidentCondition(pred, allText) : t.primary_condition)}</b><span class="t-small muted">score ${Math.round(t.base_score)} · ${esc(up && ML.confidentCondition(pred, allText) ? pred.department : t.department)}</span></div>
         <div class="quote" style="margin:6px 0">${highlightSymptoms(d.symptoms, analyse(d.symptoms, d.age, vit, d.pregnant).spans)}</div>
         ${tamil ? englishLine(enFor(d.symptoms), { pending: !en || en.for !== d.symptoms }) : ""}
         <ul style="margin:0;padding-left:18px" class="t-small">${t.reasons.map((r) => `<li>${esc(r)}</li>`).join("")}</ul>
         <div class="t-small muted" style="margin-top:4px">Would join at position ${ahead + 1} · ${LEVEL_TARGET[t.level]}</div></div>
-        ${mlPanel(ML.predict(d.symptomsEn || d.symptoms, d.age, vit, d.pregnant), t.level)}`;
+        ${mlPanel(pred, t0.level, { text: allText })}`;
     }
     form.addEventListener("input", debounce(preview, 200));
-    $("#clr", el).addEventListener("click", () => { form.reset(); voiceId = null; en = enAsked = null; preview(); });
+    $("#clr", el).addEventListener("click", () => { form.reset(); voiceId = null; en = enAsked = null; if (vctl && vctl.reset) vctl.reset(); preview(); });
     $("#reg", el).addEventListener("click", () => {
       if (!form.symptoms.value.trim()) { form.symptoms.focus(); return toast("Enter the symptoms first", "warn"); }
       const p = register(data(), voiceId ? "voice" : "reception");
-      form.reset(); voiceId = null; preview();
+      form.reset(); voiceId = null; en = enAsked = null; if (vctl && vctl.reset) vctl.reset(); preview();
       if (p.level === "critical") alarmBeep(); else softPing();
       tokenSlip(p);
     });
@@ -201,7 +230,7 @@ PAGES.reception = {
     draw();
     const off = onChange(debounceFor(el, draw, 150));
     const iv = setInterval(draw, 15000);
-    return () => { off(); clearInterval(iv); };
+    return () => { off(); clearInterval(iv); if (vctl && vctl.stop) vctl.stop(); };
   },
 };
 
@@ -316,7 +345,7 @@ PAGES.doctor = {
           ${pre ? `<div class="notice warn">${icon("siren")}<div><b>Emergency interrupt.</b> Token ${esc(S.lastPreempt.victim)} was paused and returns to the head of the queue; Token ${esc(S.lastPreempt.token)} is with you now.</div></div>` : ""}
           ${p ? `<div class="row" style="gap:16px">${tokenChip(p.token, p.level)}<div><div class="t-h2">${esc(p.name || "Unnamed")}</div><div class="muted">${esc(ageSex(p))}</div></div><div style="margin-left:auto">${prio(p.level, { lg: true })}</div></div>
             <div class="why" style="border-color:${LEVEL_COLOR[p.level]}"><div class="quote">${highlightSymptoms(p.symptoms, analyse(p.symptoms, p.age, p.vitals, p.pregnant).spans)}</div>
-              ${p.symptomsEn ? englishLine({ text: p.symptomsEn, source: p.translationSource }) : ""}
+              ${meaningLine(p)}
               <ul class="t-small" style="margin:6px 0 0;padding-left:18px">${p.reasons.map((r) => `<li>${esc(r)}</li>`).join("")}</ul></div>
             ${Object.keys(p.vitals || {}).length ? `<div class="vitals">${Object.entries(p.vitals).map(([k, v]) => `<span class="vital">${icon({ temp: "thermo", pulse: "pulse", spo2: "drop", bp_sys: "gauge", pain: "bolt" }[k] || "info")}${esc({ temp: "Temp", pulse: "Pulse", spo2: "SpO₂", bp_sys: "BP", pain: "Pain" }[k])} <b>${esc(v)}</b></span>`).join("")}</div>` : ""}
             <div class="t-small muted">Waited ${fmtMin((p.wait_s || 0) / 60)} · with you <span id="timer">${fmtMin((Date.now() - p.called) / 60000)}</span> · ${esc(p.source)}${p.voiceId ? " · registered by voice" : ""}</div>

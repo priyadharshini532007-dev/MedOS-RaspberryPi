@@ -1,0 +1,110 @@
+text,lang,condition,priority
+"I've had a crushing pain in my chest for 20 minutes and I'm sweating a lot",en,Chest pain / suspected heart attack,critical
+"my dad suddenly can't speak properly and his right side is weak",en,Stroke signs,critical
+"she fainted in the kitchen and isn't responding",en,Unconscious / collapsed,critical
+"my son swallowed some of his grandmother's tablets, maybe ten",en,Poisoning / bite / overdose,critical
+"he cut his hand on glass and it keeps bleeding through the towel",en,Severe bleeding,critical
+"I'm wheezing a bit since evening, used my inhaler once",en,Asthma attack (mild),medium
+"really bad pain in my right lower belly, I can't stand straight",en,Severe abdominal pain,high
+"twisted my ankle playing football, it's swollen and I can't walk on it",en,Fracture,high
+"temperature has been 103 since yesterday with shivering",en,High fever (>102°F),high
+"I keep throwing up since last night, can't even keep water down",en,Persistent vomiting,medium
+"headache on one side with flashing lights, feel like vomiting",en,Severe migraine/headache,medium
+"coughing up thick yellow phlegm for a week with a fever",en,Chest infection,medium
+"lower back has been aching since I moved furniture",en,Back pain,low
+"mild stomach upset after eating outside",en,Stomach pain (mild),low
+"my daughter says her ear hurts since morning",en,Ear pain,low
+"scratchy throat and it hurts to swallow",en,Sore throat,low
+"itchy red bumps on my arms since I used a new cream",en,Skin allergy/rash,low
+"runny nose and sneezing for two days",en,Cold & cough,low
+"slight temperature and body aches",en,Mild fever,low
+"I need my blood pressure checked and a refill of my tablets",en,Routine check-up,low
+"he had a fit, his whole body was shaking",en,Seizure,critical
+"my lips and face are swelling after eating peanuts",en,Severe allergic reaction,critical
+"got hit by a bus while crossing the road",en,Major trauma,critical
+"burnt my arm badly with boiling water, skin is coming off",en,Severe burns / electric shock,critical
+"I can't catch my breath even sitting still",en,Breathing difficulty,critical
+"feeling generally weak and tired, no appetite",en,Unclassified complaint,low
+"loose motions since morning, about four times",en,Stomach pain (mild),low
+"pain in my neck when I turn my head",en,Back pain,low
+"possible broken wrist after falling off the stairs",en,Fracture,high
+"chest feels tight like someone is sitting on it",en,Chest pain / suspected heart attack,critical
+"நெஞ்சு பிடிச்சு வலிக்குது, உடம்பெல்லாம் வியர்க்குது",ta,Chest pain / suspected heart attack,critical
+"அம்மாவுக்கு திடீர்னு வாய் ஒரு பக்கம் கோணிருச்சு, பேச முடியல",ta,Stroke signs,critical
+"தாத்தா மயங்கி விழுந்துட்டாரு, கண்ணே திறக்கல",ta,Unconscious / collapsed,critical
+"பையன் பூச்சி மருந்து குடிச்சுட்டான்",ta,Poisoning / bite / overdose,critical
+"கையில வெட்டு, ரத்தம் நிக்கவே இல்லை",ta,Severe bleeding,critical
+"மூச்சு இழுக்குது, இன்ஹேலர் போட்டேன்",ta,Asthma attack (mild),medium
+"வலது பக்கம் வயிறு ரொம்ப வலிக்குது, நிமிர முடியல",ta,Severe abdominal pain,high
+"விழுந்ததுல கால் எலும்பு உடைஞ்சிருக்கும் போல, நடக்கவே முடியல",ta,Fracture,high
+"ரெண்டு நாளா 103 டிகிரி காய்ச்சல், குளிர் அடிக்குது",ta,High fever (>102°F),high
+"நேத்துல இருந்து வாந்தி நிக்கவே இல்லை, தண்ணி கூட குடிக்க முடியல",ta,Persistent vomiting,medium
+"தலை ஒரு பக்கம் பயங்கரமா வலிக்குது, வெளிச்சம் பார்த்தா கஷ்டமா இருக்கு",ta,Severe migraine/headache,medium
+"ஒரு வாரமா இருமல், மஞ்சள் சளி வருது, காய்ச்சலும் இருக்கு",ta,Chest infection,medium
+"இடுப்பு ரொம்ப நாளா வலிக்குது",ta,Back pain,low
+"சாப்பிட்டதுக்கு அப்புறம் வயிறு கொஞ்சம் வலிக்குது",ta,Stomach pain (mild),low
+"பொண்ணுக்கு காது வலி, ராத்திரி முழுக்க அழுதா",ta,Ear pain,low
+"தொண்டை வலிக்குது, எச்சில் முழுங்க கஷ்டமா இருக்கு",ta,Sore throat,low
+"கை கால்ல சிவப்பா தடிச்சு அரிக்குது",ta,Skin allergy/rash,low
+"மூணு நாளா சளி, மூக்கு ஒழுகுது",ta,Cold & cough,low
+"லேசா காய்ச்சல் அடிக்குது, உடம்பு வலி",ta,Mild fever,low
+"சுகர் டெஸ்ட் பண்ணணும், மருந்து தீர்ந்துடுச்சு",ta,Routine check-up,low
+"குழந்தைக்கு வலிப்பு வந்து கை கால் உதறுது",ta,Seizure,critical
+"இறால் சாப்பிட்டதும் முகம் உதடு வீங்கி மூச்சு விட முடியல",ta,Severe allergic reaction,critical
+"பைக் ஆக்சிடென்ட், தலையில ரத்தம் வருது",ta,Major trauma,critical
+"சமைக்கும்போது எண்ணெய் கொட்டி கை முழுக்க வெந்துடுச்சு",ta,Severe burns / electric shock,critical
+"மூச்சு விடவே முடியல, உதடு நீலமா இருக்கு",ta,Breathing difficulty,critical
+"ரொம்ப சோர்வா இருக்கு, சாப்பிடவே பிடிக்கல",ta,Unclassified complaint,low
+"காலையில இருந்து அஞ்சு தடவை பேதி",ta,Stomach pain (mild),low
+"எனக்கு இப்போ ரொம்ப வயிறு வலிக்குது",ta,Severe abdominal pain,high
+"நெஞ்சு வலி இல்லை, லேசா இருமல் மட்டும்",ta,Cold & cough,low
+"தேள் கொட்டி கால் வீங்கிருக்கு",ta,Poisoning / bite / overdose,critical
+"கரண்ட் ஷாக் அடிச்சு கீழே விழுந்துட்டான்",ta,Severe burns / electric shock,critical
+"மூட்டு விலகிடுச்சு போல, கை தூக்க முடியல",ta,Fracture,high
+"உடம்பு கொதிக்குது, ரொம்ப காய்ச்சல்",ta,High fever (>102°F),high
+"BP செக் பண்ண வந்தேன்",ta,Routine check-up,low
+"ஆஸ்துமா கொஞ்சம் அதிகமா இருக்கு, விசில் மாதிரி சத்தம் வருது",ta,Asthma attack (mild),medium
+"nenju romba valikuthu, viyarvai varuthu",tl,Chest pain / suspected heart attack,critical
+"appa ku pechu sariya varala, oru pakkam kai thooka mudiyala",tl,Stroke signs,critical
+"paatti mayangi vizhunthutaanga",tl,Unconscious / collapsed,critical
+"paambu kadichiduchu kaal la",tl,Poisoning / bite / overdose,critical
+"ratham nikkave illa",tl,Severe bleeding,critical
+"adivayiru romba valikuthu right side",tl,Severe abdominal pain,high
+"kai elumbu odanchiruku pola",tl,Fracture,high
+"romba kaichal, kulir adikuthu",tl,High fever (>102°F),high
+"vaanthi nikkave illa morning la irunthu",tl,Persistent vomiting,medium
+"thalai vedikira maari valikuthu",tl,Severe migraine/headache,medium
+"irumal oda manja sali varuthu",tl,Chest infection,medium
+"muthugu vali two days ah",tl,Back pain,low
+"lesa vayiru vali",tl,Stomach pain (mild),low
+"kaathu vali",tl,Ear pain,low
+"thondai vali, muzhunga kashtama irukku",tl,Sore throat,low
+"udambu fulla arippu",tl,Skin allergy/rash,low
+"sali irumal mookku ozhuguthu",tl,Cold & cough,low
+"konjam kaichal udambu vali",tl,Mild fever,low
+"sugar check pannanum",tl,Routine check-up,low
+"moochu vida mudiyala",tl,Breathing difficulty,critical
+"no chest pain, only a mild cough since yesterday","en","Cold & cough","low"
+"I don't have any breathing trouble, just a runny nose","en","Cold & cough","low"
+"there is no bleeding, only a small scratch on my knee","en","Skin allergy/rash","low"
+"not unconscious, just a slight headache and tired","en","Mild fever","low"
+"no fever and no vomiting, my back is sore from lifting","en","Back pain","low"
+"he did not faint, only a sore throat","en","Sore throat","low"
+"no seizures at all, I came for my routine check-up","en","Routine check-up","low"
+"chest is fine, ear pain only","en","Ear pain","low"
+"நெஞ்சு வலி இல்லை, காது வலி மட்டும்","ta","Ear pain","low"
+"மூச்சு திணறல் இல்லை, லேசா சளி","ta","Cold & cough","low"
+"ரத்தம் வரல, சின்ன சிராய்ப்பு தான்","ta","Skin allergy/rash","low"
+"மயக்கம் இல்லை, தலை லேசா வலிக்குது","ta","Mild fever","low"
+"வலிப்பு இல்ல, பிபி செக் பண்ண வந்தேன்","ta","Routine check-up","low"
+"காய்ச்சல் இல்லை, முதுகு வலி மட்டும்","ta","Back pain","low"
+"வாந்தி இல்லை, வயிறு லேசா வலிக்குது","ta","Stomach pain (mild)","low"
+"நெஞ்சு வலி இல்லை, ஆனா தொண்டை வலி இருக்கு","ta","Sore throat","low"
+"nenju vali illa, kaathu vali mattum","tl","Ear pain","low"
+"moochu thinaral illa, lesa sali","tl","Cold & cough","low"
+"ratham varala, sinna kaayam thaan","tl","Skin allergy/rash","low"
+"mayakkam illa, thalai lesa valikuthu","tl","Mild fever","low"
+"valippu illa, bp check ku vanthen","tl","Routine check-up","low"
+"kaichal illa, muthugu vali mattum","tl","Back pain","low"
+"நெஞ்சு வலி இல்லை, ஆனா மூச்சு விட முடியல","ta","Breathing difficulty","critical"
+"no fever, but he is unconscious and not responding","en","Unconscious / collapsed","critical"

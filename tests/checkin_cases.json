@@ -1,0 +1,508 @@
+{
+ "name": [
+  [
+   "Kavitha",
+   "Kavitha"
+  ],
+  [
+   "My name is Ravi Kumar",
+   "Ravi Kumar"
+  ],
+  [
+   "my name is ravi kumar and I have fever",
+   "Ravi Kumar"
+  ],
+  [
+   "I'm Priya",
+   "Priya"
+  ],
+  [
+   "I’m Priya",
+   "Priya"
+  ],
+  [
+   "it's Arun",
+   "Arun"
+  ],
+  [
+   "Hello doctor, this is Meena",
+   "Meena"
+  ],
+  [
+   "Meena",
+   "Meena"
+  ],
+  [
+   "S. Kumar",
+   "S Kumar"
+  ],
+  [
+   "என்னோட பேரு கிருத்திகா",
+   "கிருத்திகா"
+  ],
+  [
+   "என் பெயர் கவிதா",
+   "கவிதா"
+  ],
+  [
+   "என்னுடைய பெயர் ரவி குமார்",
+   "ரவி குமார்"
+  ],
+  [
+   "நான் கிருத்திகா தான்",
+   "கிருத்திகா"
+  ],
+  [
+   "கிருத்திகா",
+   "கிருத்திகா"
+  ],
+  [
+   "கிருத்திகாங்க",
+   "கிருத்திகா"
+  ],
+  [
+   "வணக்கம், என்னுடைய பெயர் ரவி",
+   "ரவி"
+  ],
+  [
+   "ennoda peru Krithika",
+   "Krithika"
+  ],
+  [
+   "naan Ravi",
+   "Ravi"
+  ],
+  [
+   "",
+   null
+  ],
+  [
+   "um",
+   null
+  ]
+ ],
+ "age": [
+  [
+   "34",
+   34
+  ],
+  [
+   "thirty-four",
+   34
+  ],
+  [
+   "thirty four years",
+   34
+  ],
+  [
+   "I'm 34 years old",
+   34
+  ],
+  [
+   "eighteen",
+   18
+  ],
+  [
+   "seventy two",
+   72
+  ],
+  [
+   "பதினெட்டு",
+   18
+  ],
+  [
+   "18 வயசு",
+   18
+  ],
+  [
+   "பத்து வயசு",
+   10
+  ],
+  [
+   "முப்பத்தி நாலு வயசு",
+   34
+  ],
+  [
+   "இருபத்தஞ்சு",
+   25
+  ],
+  [
+   "இருபத்தெட்டு வயசு ஆகுது",
+   28
+  ],
+  [
+   "நாப்பத்தஞ்சு",
+   45
+  ],
+  [
+   "ஐம்பது",
+   50
+  ],
+  [
+   "எழுபத்தி ரெண்டு",
+   72
+  ],
+  [
+   "தொண்ணூத்தி ஒன்னு",
+   91
+  ],
+  [
+   "என் வயசு 72",
+   72
+  ],
+  [
+   "ஒரு 30 வயசு இருக்கும்",
+   30
+  ],
+  [
+   "ஆறு மாசம்",
+   0
+  ],
+  [
+   "6 months",
+   0
+  ],
+  [
+   "2 years 6 months",
+   2
+  ],
+  [
+   "no idea",
+   null
+  ],
+  [
+   "",
+   null
+  ]
+ ],
+ "symptoms": [
+  [
+   "எனக்கு இப்போ ரொம்ப வயிறு வலிக்குது",
+   "எனக்கு இப்போ ரொம்ப வயிறு வலிக்குது"
+  ],
+  [
+   "என்னோட பேரு கிருத்திகா எனக்கு வந்து 18 வயசு ஆகுது. எனக்கு இப்போ ரொம்ப வயிறு வலிக்குது",
+   "எனக்கு இப்போ ரொம்ப வயிறு வலிக்குது"
+  ],
+  [
+   "I am diabetic and have fever",
+   "I am diabetic and have fever"
+  ],
+  [
+   "back pain for 3 years",
+   "Back pain for 3 years"
+  ],
+  [
+   "my name is Ravi fever since 2 days",
+   "Fever since 2 days"
+  ],
+  [
+   "um, so I have chest pain",
+   "I have chest pain"
+  ],
+  [
+   "ரெண்டு நாளா காய்ச்சல்",
+   "ரெண்டு நாளா காய்ச்சல்"
+  ],
+  [
+   "So, okay",
+   ""
+  ]
+ ],
+ "parse": [
+  [
+   "என்னோட பேரு கிருத்திகா எனக்கு வந்து 18 வயசு ஆகுது. எனக்கு இப்போ ரொம்ப வயிறு வலிக்குது",
+   {
+    "name": "கிருத்திகா",
+    "age": 18,
+    "symptoms": "எனக்கு இப்போ ரொம்ப வயிறு வலிக்குது"
+   }
+  ],
+  [
+   "my name is kavitha ramesh i am thirty four years old i have a high fever since two days",
+   {
+    "name": "Kavitha Ramesh",
+    "age": 34,
+    "symptoms": "I have a high fever since 2 days"
+   }
+  ],
+  [
+   "Back pain for 3 years, I am 45 years old",
+   {
+    "name": null,
+    "age": 45,
+    "symptoms": "Back pain for 3 years"
+   }
+  ],
+  [
+   "my name is Ravi, 34 years, fever",
+   {
+    "name": "Ravi",
+    "age": 34,
+    "symptoms": "Fever"
+   }
+  ],
+  [
+   "en peru Ravi, 45 vayasu, nenju vali",
+   {
+    "name": "Ravi",
+    "age": 45,
+    "symptoms": "Nenju vali"
+   }
+  ],
+  [
+   "அப்பாவுக்கு 72 வயசு, மூச்சு விட முடியல",
+   {
+    "name": null,
+    "age": 72,
+    "sex": "male",
+    "symptoms": "அப்பாவுக்கு மூச்சு விட முடியல"
+   }
+  ],
+  [
+   "என் பெயர் கவிதா, 34 வயசு, ரெண்டு நாளா காய்ச்சல்",
+   {
+    "name": "கவிதா",
+    "age": 34,
+    "symptoms": "ரெண்டு நாளா காய்ச்சல்"
+   }
+  ],
+  [
+   "என்னுடைய பெயர் ரவி, முப்பத்தி நாலு வயசு, நெஞ்சு வலிக்குது",
+   {
+    "name": "ரவி",
+    "age": 34,
+    "symptoms": "நெஞ்சு வலிக்குது"
+   }
+  ],
+  [
+   "நான் கர்ப்பமா இருக்கேன், வயிறு வலி",
+   {
+    "pregnant": true,
+    "sex": "female"
+   }
+  ],
+  [
+   "I am having fever",
+   {
+    "name": null
+   }
+  ]
+ ],
+ "triage": [
+  [
+   "sudden chest pain and sweating",
+   "critical"
+  ],
+  [
+   "no chest pain, mild cough",
+   "low"
+  ],
+  [
+   "my stomach is paining a lot",
+   "high"
+  ],
+  [
+   "fever since two days",
+   "low"
+  ],
+  [
+   "fracture of left wrist",
+   "high"
+  ],
+  [
+   "persistent vomiting since morning",
+   "medium"
+  ],
+  [
+   "நெஞ்சு வலிக்குது, வியர்க்குது",
+   "critical"
+  ],
+  [
+   "நெஞ்சு வலி இல்லை, லேசான இருமல்",
+   "low"
+  ],
+  [
+   "ரத்தம் நிற்கவே இல்லை",
+   "critical"
+  ],
+  [
+   "வாந்தி நிற்கவே இல்லை",
+   "medium"
+  ],
+  [
+   "சுயநினைவு இல்லை",
+   "critical"
+  ],
+  [
+   "எனக்கு இப்போ ரொம்ப வயிறு வலிக்குது",
+   "high"
+  ],
+  [
+   "லேசா வயிறு வலிக்குது",
+   "low"
+  ],
+  [
+   "மாடியில இருந்து விழுந்துட்டாரு",
+   "critical"
+  ],
+  [
+   "பாம்பு கடிச்சுடுச்சு",
+   "critical"
+  ],
+  [
+   "காது வலி நேத்து ராத்திரியில இருந்து",
+   "low"
+  ],
+  [
+   "மயக்கமா இருக்கு",
+   "low"
+  ],
+  [
+   "தலைவலி இருக்கு",
+   "low"
+  ],
+  [
+   "nenju vali illa, irumal",
+   "low"
+  ],
+  [
+   "ratham nikkala",
+   "critical"
+  ],
+  [
+   "moochu vida mudiyala",
+   "critical"
+  ],
+  [
+   "அப்பாவுக்கு மூச்சு விட முடியல",
+   "critical"
+  ],
+  [
+   "ரெண்டு நாளா காய்ச்சல்",
+   "low"
+  ],
+  [
+   "அதிக காய்ச்சல், உடம்பு நடுங்குது",
+   "high"
+  ],
+  [
+   "ratham nikkave illa",
+   "critical"
+  ],
+  [
+   "moochu varave illa",
+   "critical"
+  ],
+  [
+   "காய்ச்சல் குறையவே இல்ல, நடுக்கம்",
+   "high"
+  ],
+  [
+   "valippu theliyave illa",
+   "critical"
+  ]
+ ],
+ "denied": [
+  [
+   "no chest pain, only a mild cough",
+   "Chest pain / suspected heart attack",
+   true
+  ],
+  [
+   "நெஞ்சு வலி இல்ல, ஆனா இருமல் இருக்கு",
+   "Chest pain / suspected heart attack",
+   true
+  ],
+  [
+   "நெஞ்சு வலி இல்லை",
+   "Chest pain / suspected heart attack",
+   true
+  ],
+  [
+   "nenju vali illa, irumal",
+   "Chest pain / suspected heart attack",
+   true
+  ],
+  [
+   "I have chest pain",
+   "Chest pain / suspected heart attack",
+   false
+  ],
+  [
+   "நெஞ்சு வலிக்குது",
+   "Chest pain / suspected heart attack",
+   false
+  ],
+  [
+   "no chest pain but he is unconscious",
+   "Unconscious / collapsed",
+   false
+  ],
+  [
+   "fever and cough",
+   "Chest pain / suspected heart attack",
+   false
+  ],
+  [
+   "மூச்சு திணறல் இல்லை, லேசா சளி",
+   "Breathing difficulty",
+   true
+  ],
+  [
+   "no bleeding, a small scratch",
+   "Severe bleeding",
+   true
+  ],
+  [
+   "ரத்தம் நிற்கவே இல்லை",
+   "Severe bleeding",
+   false
+  ],
+  [
+   "not unconscious, just tired",
+   "Unconscious / collapsed",
+   true
+  ],
+  [
+   "",
+   "Seizure",
+   false
+  ],
+  [
+   "he is not breathing",
+   "Breathing difficulty",
+   false
+  ],
+  [
+   "பேச்சு மூச்சு இல்லை",
+   "Breathing difficulty",
+   false
+  ],
+  [
+   "ratham nikkave illa",
+   "Severe bleeding",
+   false
+  ],
+  [
+   "காய்ச்சல் குறையவே இல்ல",
+   "High fever (>102°F)",
+   false
+  ],
+  [
+   "he will not wake up",
+   "Unconscious / collapsed",
+   false
+  ],
+  [
+   "no fever, no vomiting, only a cough",
+   "Persistent vomiting",
+   true
+  ],
+  [
+   "no seizures, came for a check-up",
+   "Seizure",
+   true
+  ]
+ ]
+}

@@ -204,15 +204,23 @@ class Scheduler:
             base = triage.base_score(level, rank, result["bonus"])
         # Machine-learning second opinion (ml/train.py). It may only RAISE the level, only when it is
         # confident, and never overrides staff.
+        # It reads English, Tamil and Tanglish, and also names the condition (and so the department) it understood.
         ml_pred = ml_triage.predict(symptoms, age, vitals, pregnant) if db.get_setting("ml_triage") and symptoms else None
-        ml_up = ml_triage.upgrade(level, ml_pred) if level_source != "manual" and not data.get("emergency") else None
+        # (a symptom the patient denies — "no chest pain" — never raises anything)
+        ml_up = ml_triage.upgrade(level, ml_pred, symptoms, self.conditions()) if level_source != "manual" and not data.get("emergency") else None
+        ml_cond = ml_triage.confident_condition(ml_pred, symptoms, self.conditions())
+        primary, department = result["primary_condition"], result["department"]
         if ml_up:
-            reasons = reasons + ["ML model: %s (%d%% confident, from \"%s\") — raised from %s" % (
-                triage.LEVEL_LABEL[ml_up], round(ml_pred["confidence"] * 100), ", ".join(ml_pred["top_terms"][:2]) or "vitals",
-                triage.LEVEL_LABEL[level])]
+            reasons = reasons + ["ML model: %s (%d%% sure it is %s) — raised from %s" % (
+                triage.LEVEL_LABEL[ml_up], round(ml_pred["condition_confidence"] * 100) if ml_cond else round(ml_pred["confidence"] * 100),
+                ml_cond or "%s priority" % triage.LEVEL_LABEL[ml_up].lower(), triage.LEVEL_LABEL[level])]
             rank = 0 if ml_up == "critical" else rank
             level, level_source = ml_up, "ml"
             base = triage.base_score(level, rank, result["bonus"])
+        # The rules found nothing recognisable (e.g. an unusual Tamil phrasing) but the model understood it.
+        if ml_cond and level_source != "manual" and primary == "Unclassified complaint":
+            primary, department = ml_cond, ml_pred["department"]
+            reasons = reasons + ["ML model understood the complaint as %s" % ml_cond]
         t = arrived_at or time.time()
         with self.lock:
             seq = (db.scalar("SELECT COUNT(*) FROM patients WHERE day=?", (db.today(),)) or 0) + 1
@@ -229,9 +237,9 @@ class Scheduler:
                 "level_source": level_source,
                 "ml_level": ml_pred["level"] if ml_pred else None,
                 "ml_confidence": ml_pred["confidence"] if ml_pred else None,
-                "primary_condition": result["primary_condition"],
+                "primary_condition": primary,
                 "conditions": db.encode(result["conditions"]), "red_flags": db.encode(result["red_flags"]),
-                "reasons": db.encode(reasons), "department": result["department"],
+                "reasons": db.encode(reasons), "department": department,
                 "ai_status": "pending" if self._ai_on() and not data.get("emergency") else "off",
                 "source": source, "emergency": 1 if data.get("emergency") else 0,
                 "status": "waiting", "arrived_at": t,

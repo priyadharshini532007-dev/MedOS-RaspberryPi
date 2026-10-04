@@ -56,9 +56,11 @@ const Voice = (() => {
     const wa = words(a), wb = words(b);
     if (!wa.length || !wb.length) return false;
     const n = Math.min(wa.length, wb.length);
+    // the last word of the shorter text may still be growing ("hi" → "high"), so a prefix counts as the same word
+    const sameWord = (i) => wa[i] === wb[i] || (i === n - 1 && Math.min(wa[i].length, wb[i].length) >= 2 && (wa[i].startsWith(wb[i]) || wb[i].startsWith(wa[i])));
     let same = 0;
-    for (let i = 0; i < n; i++) if (wa[i] === wb[i]) same++;
-    return wa[0] === wb[0] && same >= Math.max(1, Math.ceil(n * 0.6));
+    for (let i = 0; i < n; i++) if (sameWord(i)) same++;
+    return sameWord(0) && same >= Math.max(1, Math.ceil(n * 0.6));
   }
   function mergeResults(results, cumulative = isAndroid) {
     const parts = [];
@@ -313,6 +315,271 @@ function mountVoice(el, { onResult, source = "reception", compact = false, lang 
     setPaused(!paused);
   });
   return { stop };
+}
+
+// ---------------------------------------------------------------- guided check-in: three questions, one field each
+// Name, then age, then the problem — each answer fills only its own field, so nothing gets mixed up. Works in
+// English and Tamil: the question is shown (and spoken, when the device has a voice for that language); the app
+// never listens while it is speaking, and each recording runs until the patient taps Done.
+const GUIDED_STEPS = ["name", "age", "problem"];
+const GUIDED_TEXT = {
+  "en-IN": {
+    title: "Voice check-in", sub: "3 short questions", start: "Start voice check-in", done: "Done", again: "Say again", edit: "Edit",
+    type: "Type instead", yes: "Yes, next", finish: "Yes, finish", restart: "Start again", listening: "Listening… tap Done when you finish.",
+    speaking: "Asking…", notHeard: "We didn't catch that — please say it again, or type it.",
+    labels: { name: "Name", age: "Age", problem: "Problem" },
+    q: { name: "What is your name?", age: "How old are you?", problem: "What is the problem?" },
+    hint: { name: "Say just your name — for example “Kavitha”.", age: "Say your age — for example “34”. For a baby, say “6 months”.",
+      problem: "Say what is wrong and since when — for example “fever and cough for two days”." },
+    retry: { name: "Please say just your name.", age: "Please say the age as a number, like “34”.", problem: "Please tell us what is wrong." },
+    infant: "under 1 year", years: "years", allSet: "All three answers recorded.",
+  },
+  "ta-IN": {
+    title: "குரல் பதிவு", sub: "3 சிறிய கேள்விகள்", start: "குரல் பதிவைத் தொடங்கு", done: "முடிந்தது", again: "மீண்டும் சொல்லுங்கள்", edit: "திருத்து",
+    type: "தட்டச்சு செய்ய", yes: "சரி, அடுத்து", finish: "சரி, முடி", restart: "மீண்டும் தொடங்கு", listening: "கேட்கிறது… சொல்லி முடித்ததும் “முடிந்தது” அழுத்துங்கள்.",
+    speaking: "கேட்கிறோம்…", notHeard: "சரியாகக் கேட்கவில்லை — மீண்டும் சொல்லுங்கள், அல்லது தட்டச்சு செய்யுங்கள்.",
+    labels: { name: "பெயர்", age: "வயது", problem: "பிரச்சனை" },
+    q: { name: "உங்கள் பெயர் என்ன?", age: "உங்களுக்கு எத்தனை வயசு?", problem: "என்ன பிரச்சனை?" },
+    hint: { name: "பெயரை மட்டும் சொல்லுங்கள் — எ.கா. “கவிதா”.", age: "வயதைச் சொல்லுங்கள் — எ.கா. “34” அல்லது “பதினெட்டு”. குழந்தைக்கு “ஆறு மாசம்”.",
+      problem: "என்ன பிரச்சனை, எத்தனை நாளா என்று சொல்லுங்கள் — எ.கா. “ரெண்டு நாளா காய்ச்சல், இருமல்”." },
+    retry: { name: "பெயரை மட்டும் சொல்லுங்கள்.", age: "வயதை எண்ணாகச் சொல்லுங்கள், எ.கா. “34”.", problem: "என்ன பிரச்சனை என்று சொல்லுங்கள்." },
+    infant: "1 வயதுக்குக் குறைவு", years: "வயது", allSet: "மூன்று பதில்களும் பதிவாகின.",
+  },
+};
+
+// Speak a question; resolves when it has finished (or straight away if this device has no voice for the language).
+function speakQuestion(text, lang) {
+  return new Promise((resolve) => {
+    if (!("speechSynthesis" in window)) return resolve(false);
+    const voices = speechSynthesis.getVoices();
+    const prefix = lang.slice(0, 2);
+    if (voices.length && !voices.some((v) => v.lang && v.lang.toLowerCase().startsWith(prefix))) return resolve(false);
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = lang; u.rate = 0.95;
+    const voice = voices.find((v) => v.lang && v.lang.toLowerCase().startsWith(prefix));
+    if (voice) u.voice = voice;
+    let settled = false;
+    const done = () => { if (!settled) { settled = true; setTimeout(() => resolve(true), 250); } };   // let the speaker go quiet
+    u.onend = done; u.onerror = done;
+    setTimeout(done, 7000);                                                                          // never hang
+    speechSynthesis.cancel(); speechSynthesis.speak(u);
+  });
+}
+
+// mountGuidedVoice(el, {onDone({name, age, symptoms, symptomsEn, translationSource, lang, audioId, durationS, transcripts}),
+//                       onStep(field, value), source})
+function mountGuidedVoice(el, { onDone, onStep, source = "patient" } = {}) {
+  let lang = store("medos.voice.lang") || "en-IN";
+  let step = null, session = null, answers = {}, raw = {}, clip = {}, history = [], clock = null, speakToken = 0;
+  const T = () => GUIDED_TEXT[lang] || GUIDED_TEXT["en-IN"];
+  el.classList.add("guided");
+
+  const shown = (field, v) => (v == null || v === "" ? "—" : field === "age" ? (v === 0 ? T().infant : `${v} ${T().years}`) : v);
+
+  function frame() {
+    const t = T();
+    el.innerHTML = `
+      <div class="g-head">
+        <div><b>${icon("mic")}${esc(t.title)}</b><small>${esc(t.sub)}</small></div>
+        <div class="seg seg-sm g-lang" role="group" aria-label="Language">
+          <button type="button" data-lang="en-IN" aria-pressed="${lang === "en-IN"}">English</button>
+          <button type="button" data-lang="ta-IN" lang="ta" aria-pressed="${lang === "ta-IN"}">தமிழ்</button></div>
+      </div>
+      <ol class="g-steps">${GUIDED_STEPS.map((f, i) => `<li data-step="${f}" class="${step === f ? "now" : answers[f] != null ? "done" : ""}">
+          <span class="g-n">${answers[f] != null && step !== f ? icon("check") : i + 1}</span>
+          <span class="g-l"><b>${esc(t.labels[f])}</b><small>${answers[f] != null ? esc(shown(f, answers[f])) : ""}</small></span></li>`).join("")}</ol>
+      <div class="g-stage" aria-live="polite"></div>`;
+    $$(".g-lang button", el).forEach((b) => b.addEventListener("click", () => {
+      if (session) return;
+      lang = b.dataset.lang; store("medos.voice.lang", lang);
+      frame(); step ? ask(step) : intro();          // mid-way: ask the current question again, in the new language
+    }));
+    $$(".g-steps li", el).forEach((li) => li.addEventListener("click", () => {
+      const f = li.dataset.step;
+      if (session || step === null || (answers[f] == null && f !== step)) return;   // only finished steps can be redone
+      stopAll(); ask(f);
+    }));
+  }
+  const stage = () => $(".g-stage", el);
+  // Keep the whole question card on screen — above the fixed bottom tab bar on phones, so Done can't be hidden under it.
+  const inView = () => { try { el.scrollIntoView({ block: "nearest", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); } catch { /* old browser */ } };
+
+  function intro() {
+    const t = T();
+    stage().innerHTML = `<button type="button" class="btn primary lg block g-start">${icon("mic")}${esc(t.start)}</button>
+      <p class="t-small muted" style="margin-top:8px">${esc(t.q.name)} → ${esc(t.q.age)} → ${esc(t.q.problem)}</p>`;
+    $(".g-start", el).addEventListener("click", () => { audioCtx(); ask("name"); });
+    if (!Voice.caps.speech) $(".g-start", el).disabled = true;
+  }
+
+  function stopAll() {
+    speakToken++;
+    if ("speechSynthesis" in window) speechSynthesis.cancel();
+    if (session) { const s = session; session = null; s.stop(); }
+    clearInterval(clock);
+  }
+
+  // Show a question, speak it, then listen.
+  async function ask(field, { speak = true, retry = false } = {}) {
+    step = field;
+    frame();
+    const t = T();
+    stage().innerHTML = `
+      <p class="g-q">${esc(t.q[field])}</p>
+      <p class="g-hint">${esc(retry ? t.retry[field] : t.hint[field])}</p>
+      <div class="voice-row g-rec">
+        <button type="button" class="mic-btn" aria-label="${esc(t.done)}">${icon("mic")}<span class="mic-ring"></span></button>
+        <div class="voice-main"><canvas class="wave" height="44" aria-hidden="true"></canvas><p class="voice-live">${esc(t.speaking)}</p></div>
+      </div>
+      <div class="g-ctl">
+        <button type="button" class="btn primary g-done" disabled>${icon("check")}${esc(t.done)}</button>
+        <button type="button" class="btn ghost g-type">${icon("keyboard")}${esc(t.type)}</button>
+      </div>`;
+    $(".g-type", el).addEventListener("click", () => { stopAll(); typeAnswer(field); });
+    inView();
+    const token = ++speakToken;
+    if (speak) await speakQuestion(t.q[field], lang);
+    if (token !== speakToken || step !== field) return;       // the patient moved on while it was speaking
+    listenFor(field);
+  }
+
+  function listenFor(field) {
+    const t = T();
+    const live = $(".voice-live", el), canvas = $(".wave", el), doneBtn = $(".g-done", el), mic = $(".mic-btn", el);
+    const g = canvas.getContext("2d");
+    history = [];
+    el.classList.add("listening");
+    live.textContent = t.listening;
+    doneBtn.disabled = false;
+    const draw = (level) => {
+      const w = (canvas.width = canvas.clientWidth * devicePixelRatio), h = (canvas.height = 44 * devicePixelRatio);
+      history.push(level); if (history.length > 48) history.shift();
+      g.clearRect(0, 0, w, h);
+      g.fillStyle = (getComputedStyle(el).getPropertyValue("--wave") || "#0e7490").trim() || "#0e7490";
+      const bw = w / 48;
+      history.forEach((v, i) => { const bh = Math.max(2 * devicePixelRatio, v * h * 0.95); g.fillRect(i * bw + bw * 0.2, (h - bh) / 2, bw * 0.6, bh); });
+    };
+    const s = Voice.listen({ lang, record: field === "problem" && Voice.caps.canRecordWithSpeech,
+      onPartial: (txt) => { live.innerHTML = esc(txt) + '<span class="caret"></span>'; live.scrollTop = live.scrollHeight; },
+      onLevel: (v) => draw(v) });
+    session = s;
+    const finish = () => { if (session === s) { doneBtn.disabled = true; doneBtn.lastChild.textContent = "…"; s.stop(); } };
+    doneBtn.addEventListener("click", finish);
+    mic.addEventListener("click", finish);
+    s.promise.then((r) => {
+      if (session !== s) return;
+      session = null;
+      el.classList.remove("listening");
+      if (field === "problem" && r.audioId) clip = { audioId: r.audioId, durationS: r.durationS };
+      accept(field, r.text);
+    }).catch((e) => {
+      if (session !== s) return;
+      session = null;
+      el.classList.remove("listening");
+      live.textContent = e.message || t.notHeard;
+      showRetry(field);
+    });
+  }
+
+  // One answer → one field, with the parser made for that question.
+  function valueFor(field, text) {
+    if (field === "name") return extractName(text);
+    if (field === "age") return extractAge(text);
+    const s = cleanSymptoms(text);
+    return s || null;
+  }
+
+  function accept(field, text) {
+    const value = valueFor(field, text);
+    raw[field] = text;
+    if (value == null) return ask(field, { speak: false, retry: true });
+    showResult(field, value, text);
+  }
+
+  function showResult(field, value, heard) {
+    const t = T();
+    const last = field === "problem";
+    stage().innerHTML = `
+      <p class="g-q">${esc(t.q[field])}</p>
+      <div class="g-result"><span class="g-rl">${esc(t.labels[field])}</span><b class="g-rv">${esc(shown(field, value))}</b>
+        ${heard && heard.trim() !== String(value) ? `<small class="muted">“${esc(heard)}”</small>` : ""}</div>
+      <div class="g-ctl">
+        <button type="button" class="btn primary g-yes">${icon("check")}${esc(last ? t.finish : t.yes)}</button>
+        <button type="button" class="btn g-again">${icon("refresh")}${esc(t.again)}</button>
+        <button type="button" class="btn ghost g-edit">${icon("keyboard")}${esc(t.edit)}</button>
+      </div>`;
+    inView();
+    $(".g-yes", el).addEventListener("click", () => {
+      answers[field] = value;
+      onStep && onStep(field, value);
+      const next = GUIDED_STEPS[GUIDED_STEPS.indexOf(field) + 1];
+      if (next && answers[next] == null) ask(next);
+      else if (GUIDED_STEPS.every((f) => answers[f] != null)) complete();
+      else ask(GUIDED_STEPS.find((f) => answers[f] == null));
+    });
+    $(".g-again", el).addEventListener("click", () => ask(field, { speak: false }));
+    $(".g-edit", el).addEventListener("click", () => typeAnswer(field, value));
+  }
+
+  function showRetry(field) {
+    const t = T();
+    const ctl = $(".g-ctl", el);
+    ctl.innerHTML = `<button type="button" class="btn primary g-again">${icon("refresh")}${esc(t.again)}</button>
+      <button type="button" class="btn ghost g-type">${icon("keyboard")}${esc(t.type)}</button>`;
+    $(".g-again", el).addEventListener("click", () => ask(field, { speak: false }));
+    $(".g-type", el).addEventListener("click", () => typeAnswer(field));
+  }
+
+  function typeAnswer(field, current) {
+    const t = T();
+    step = field;
+    frame();
+    const isAge = field === "age";
+    stage().innerHTML = `
+      <p class="g-q">${esc(t.q[field])}</p>
+      <form class="g-form">
+        ${field === "problem" ? `<textarea class="textarea" name="v" rows="3"></textarea>` : `<input class="input" name="v" ${isAge ? 'inputmode="numeric"' : ""} autocomplete="off">`}
+        <button class="btn primary">${icon("check")}${esc(t.yes)}</button>
+      </form>`;
+    const f = $(".g-form", el);
+    f.v.value = current == null ? "" : String(current);
+    inView();
+    f.v.focus({ preventScroll: true });
+    f.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const text = f.v.value.trim();
+      if (!text) return;
+      const value = valueFor(field, text);
+      if (value == null) { toast(t.retry[field], "warn"); return; }
+      raw[field] = text;
+      showResult(field, value, text);
+    });
+  }
+
+  async function complete() {
+    step = null;
+    frame();
+    const t = T();
+    const symptoms = answers.problem;
+    const result = { name: answers.name, age: answers.age, symptoms, lang, source, transcripts: { ...raw }, ...clip };
+    stage().innerHTML = `<p class="g-allset">${icon("check")}${esc(t.allSet)}</p>
+      <div class="g-summary">${GUIDED_STEPS.map((f) => `<div><span>${esc(t.labels[f])}</span><b>${esc(shown(f, answers[f]))}</b></div>`).join("")}</div>
+      <div class="g-en"></div>
+      <button type="button" class="btn ghost sm g-restart">${icon("refresh")}${esc(t.restart)}</button>`;
+    $(".g-restart", el).addEventListener("click", () => { answers = {}; raw = {}; clip = {}; ask("name"); });
+    if (isTamilText(symptoms) && typeof Translate !== "undefined") {
+      $(".g-en", el).innerHTML = englishLine(null, { pending: true });
+      const en = await Translate.toEnglish(symptoms);
+      if (en && en.text) { result.symptomsEn = en.text; result.translationSource = en.source; }
+      const box = $(".g-en", el);
+      if (box) box.innerHTML = en && en.text ? englishLine(en) : "";
+    }
+    onDone && onDone(result);
+  }
+
+  frame();
+  intro();
+  return { stop: stopAll, reset: () => { stopAll(); answers = {}; raw = {}; clip = {}; step = null; frame(); intro(); } };
 }
 
 // Play a saved clip.

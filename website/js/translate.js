@@ -57,6 +57,9 @@ const Translate = (() => {
 
   // Offline fallback: the conditions the Tamil-aware triage rules found, in English.
   function viaRules(text) {
+    // The trained model understands Tamil and Tanglish offline: name the condition it is sure about.
+    const understood = typeof ML !== "undefined" && ML.available ? ML.confidentCondition(ML.predict(text), text) : null;
+    if (understood) return understood;
     const t = analyse(text);
     if (!t.conditions.length) return null;
     return t.conditions.map((c) => c.name.replace(/\s*\(.*?\)/, "").replace(/ \/ .*/, "")).join("; ");
@@ -78,6 +81,15 @@ const Translate = (() => {
   return { isTamil, toEnglish };
 })();
 
+// What a Tamil complaint means, for staff: what the model understood (reliable) first, the machine translation
+// (free online service, can be wrong) second and labelled as such.
+function meaningLine(p) {
+  if (!isTamilText(p.symptoms)) return "";
+  const bits = [];
+  if (p.mlCondition) bits.push(`<b>Understood as:</b> ${esc(p.mlCondition)}`);
+  if (p.symptomsEn) bits.push(`<span class="muted">machine translation: “${esc(p.symptomsEn)}”</span>`);
+  return bits.length ? `<div class="en-line" lang="en">${icon("send")}<span>${bits.join(" · ")}</span></div>` : "";
+}
 // "In English: …" line shown under a Tamil text.
 function englishLine(en, { pending = false } = {}) {
   if (pending) return `<div class="en-line muted">${icon("refresh")}Translating to English…</div>`;

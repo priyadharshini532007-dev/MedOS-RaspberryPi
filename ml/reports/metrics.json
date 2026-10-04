@@ -1,174 +1,731 @@
 {
   "dataset": {
     "file": "ml/data/triage_synthetic.csv",
-    "rows": 8000,
-    "train": 6400,
-    "test": 1600,
+    "rows": 18000,
+    "train": 15300,
+    "test": 2700,
     "synthetic": true,
+    "languages": {
+      "en": 7936,
+      "ta": 5359,
+      "tl": 2537,
+      "mx": 2168
+    },
     "class_counts": {
-      "low": 3281,
-      "medium": 1814,
-      "high": 1534,
-      "critical": 1371
-    }
+      "low": 7338,
+      "medium": 4222,
+      "high": 3442,
+      "critical": 2998
+    },
+    "conditions": 26
   },
   "model": {
-    "type": "TF-IDF (1-2 grams) + standardised vitals \u2192 multinomial logistic regression",
-    "vocabulary": 2242,
-    "features": 2256,
-    "train_seconds": 0.85
+    "features": "words + word pairs + 3-5 character pieces (TF-IDF) + vitals",
+    "text_features": 16000,
+    "priority_head": "multinomial logistic regression, 4 levels",
+    "condition_head": "multinomial logistic regression, 26 conditions",
+    "weights": "8-bit integers, one scale per class",
+    "train_seconds": 41.6,
+    "max_features": 16000,
+    "C_priority": 4.0,
+    "C_condition": 8.0
   },
   "test": {
-    "ml_model": {
-      "accuracy": 0.9506,
-      "macro_f1": 0.9438,
-      "critical_recall": 0.8759,
-      "under_triage_rate": 0.0381
+    "rows": 2700,
+    "priority": {
+      "rules_engine": {
+        "accuracy": 0.7922,
+        "critical_recall": 0.7444,
+        "under_triage": 0.1922,
+        "false_critical": 0.0126
+      },
+      "ml_model": {
+        "accuracy": 0.9411,
+        "critical_recall": 0.8267,
+        "under_triage": 0.0389,
+        "false_critical": 0.01
+      },
+      "rules_plus_ml_upgrade": {
+        "accuracy": 0.9656,
+        "critical_recall": 0.9667,
+        "under_triage": 0.0137,
+        "false_critical": 0.0133
+      }
     },
-    "rules_engine": {
-      "accuracy": 0.7581,
-      "macro_f1": 0.7383,
-      "critical_recall": 0.6715,
-      "under_triage_rate": 0.23
-    },
-    "rules_plus_ml_upgrade": {
-      "accuracy": 0.9675,
-      "macro_f1": 0.9643,
-      "critical_recall": 0.9818,
-      "under_triage_rate": 0.0156
+    "condition_accuracy": 0.9922,
+    "department_accuracy": 0.9944,
+    "confident_condition": {
+      "share": 0.9559,
+      "accuracy": 0.9957
     }
   },
-  "test_paraphrases_only": {
-    "rows": 871,
-    "ml_model": {
-      "accuracy": 0.9541,
-      "macro_f1": 0.9489,
-      "critical_recall": 0.8846,
-      "under_triage_rate": 0.0379
+  "test_by_language": {
+    "en": {
+      "rows": 1182,
+      "priority": {
+        "rules_engine": {
+          "accuracy": 0.7817,
+          "critical_recall": 0.6757,
+          "under_triage": 0.198,
+          "false_critical": 0.0169
+        },
+        "ml_model": {
+          "accuracy": 0.9518,
+          "critical_recall": 0.8378,
+          "under_triage": 0.0355,
+          "false_critical": 0.0034
+        },
+        "rules_plus_ml_upgrade": {
+          "accuracy": 0.9619,
+          "critical_recall": 0.973,
+          "under_triage": 0.0135,
+          "false_critical": 0.0169
+        }
+      },
+      "condition_accuracy": 0.9975,
+      "department_accuracy": 0.9975,
+      "confident_condition": {
+        "share": 0.9687,
+        "accuracy": 0.9983
+      }
     },
-    "rules_engine": {
-      "accuracy": 0.5672,
-      "macro_f1": 0.4965,
-      "critical_recall": 0.4359,
-      "under_triage_rate": 0.4145
+    "ta": {
+      "rows": 804,
+      "priority": {
+        "rules_engine": {
+          "accuracy": 0.7799,
+          "critical_recall": 0.8333,
+          "under_triage": 0.2015,
+          "false_critical": 0.0149
+        },
+        "ml_model": {
+          "accuracy": 0.9341,
+          "critical_recall": 0.8409,
+          "under_triage": 0.0373,
+          "false_critical": 0.0149
+        },
+        "rules_plus_ml_upgrade": {
+          "accuracy": 0.9639,
+          "critical_recall": 0.9848,
+          "under_triage": 0.0062,
+          "false_critical": 0.0174
+        }
+      },
+      "condition_accuracy": 0.9876,
+      "department_accuracy": 0.9913,
+      "confident_condition": {
+        "share": 0.954,
+        "accuracy": 0.9922
+      }
     },
-    "rules_plus_ml_upgrade": {
-      "accuracy": 0.9529,
-      "macro_f1": 0.9493,
-      "critical_recall": 0.9808,
-      "under_triage_rate": 0.0207
+    "tl": {
+      "rows": 400,
+      "priority": {
+        "rules_engine": {
+          "accuracy": 0.6875,
+          "critical_recall": 0.5714,
+          "under_triage": 0.305,
+          "false_critical": 0.005
+        },
+        "ml_model": {
+          "accuracy": 0.9075,
+          "critical_recall": 0.7662,
+          "under_triage": 0.0575,
+          "false_critical": 0.025
+        },
+        "rules_plus_ml_upgrade": {
+          "accuracy": 0.955,
+          "critical_recall": 0.8961,
+          "under_triage": 0.0375,
+          "false_critical": 0.005
+        }
+      },
+      "condition_accuracy": 0.98,
+      "department_accuracy": 0.9875,
+      "confident_condition": {
+        "share": 0.91,
+        "accuracy": 0.9918
+      }
+    },
+    "mx": {
+      "rows": 314,
+      "priority": {
+        "rules_engine": {
+          "accuracy": 0.9968,
+          "critical_recall": 1.0,
+          "under_triage": 0.0032,
+          "false_critical": 0.0
+        },
+        "ml_model": {
+          "accuracy": 0.9618,
+          "critical_recall": 0.8393,
+          "under_triage": 0.0318,
+          "false_critical": 0.0032
+        },
+        "rules_plus_ml_upgrade": {
+          "accuracy": 0.9968,
+          "critical_recall": 1.0,
+          "under_triage": 0.0032,
+          "false_critical": 0.0
+        }
+      },
+      "condition_accuracy": 1.0,
+      "department_accuracy": 1.0,
+      "confident_condition": {
+        "share": 0.9713,
+        "accuracy": 1.0
+      }
     }
   },
-  "confusion_matrix": {
-    "labels": [
-      "critical",
-      "high",
-      "medium",
-      "low"
-    ],
-    "ml_model": [
-      [
-        240,
-        18,
-        12,
-        4
-      ],
-      [
-        2,
-        290,
-        6,
-        9
-      ],
-      [
-        1,
-        3,
-        347,
-        12
-      ],
-      [
-        3,
-        1,
-        8,
-        644
-      ]
-    ],
-    "rules_plus_ml_upgrade": [
-      [
-        269,
-        5,
-        0,
-        0
-      ],
-      [
-        1,
-        297,
-        4,
-        5
-      ],
-      [
-        15,
-        3,
-        334,
-        11
-      ],
-      [
-        0,
-        0,
-        8,
-        648
-      ]
-    ]
-  },
-  "per_class": {
-    "critical": {
-      "precision": 0.975609756097561,
-      "recall": 0.8759124087591241,
-      "f1-score": 0.9230769230769231,
-      "support": 274.0
-    },
-    "high": {
-      "precision": 0.9294871794871795,
-      "recall": 0.9446254071661238,
-      "f1-score": 0.9369951534733441,
-      "support": 307.0
-    },
-    "medium": {
-      "precision": 0.9302949061662198,
-      "recall": 0.9559228650137741,
-      "f1-score": 0.9429347826086957,
-      "support": 363.0
-    },
-    "low": {
-      "precision": 0.9626307922272048,
-      "recall": 0.9817073170731707,
-      "f1-score": 0.9720754716981133,
-      "support": 656.0
-    },
-    "accuracy": 0.950625,
-    "macro avg": {
-      "precision": 0.9495056584945412,
-      "recall": 0.9395419995030481,
-      "f1-score": 0.9437705827142691,
-      "support": 1600.0
-    },
-    "weighted avg": {
-      "precision": 0.9511578049454249,
-      "recall": 0.950625,
-      "f1-score": 0.9503421403501952,
-      "support": 1600.0
-    }
-  },
-  "trained_at": "2026-10-02 15:43",
   "unseen_phrasings": {
-    "held_out_phrasings": 25,
-    "rows": 1174,
-    "ml_model": 0.6184,
-    "rules_engine": 0.6908,
-    "rules_plus_ml_upgrade": 0.7283,
-    "critical_recall": {
-      "ml_model": 0.5808,
-      "rules_engine": 0.479,
-      "rules_plus_ml_upgrade": 0.6287
+    "rows": 1763,
+    "priority": {
+      "rules_engine": {
+        "accuracy": 0.6699,
+        "critical_recall": 0.4631,
+        "under_triage": 0.325,
+        "false_critical": 0.0028
+      },
+      "ml_model": {
+        "accuracy": 0.7867,
+        "critical_recall": 0.7746,
+        "under_triage": 0.0681,
+        "false_critical": 0.1333
+      },
+      "rules_plus_ml_upgrade": {
+        "accuracy": 0.8423,
+        "critical_recall": 0.6598,
+        "under_triage": 0.1327,
+        "false_critical": 0.021
+      }
+    },
+    "condition_accuracy": 0.7595,
+    "department_accuracy": 0.7986,
+    "confident_condition": {
+      "share": 0.5434,
+      "accuracy": 0.8633
+    },
+    "held_out_phrases": 75,
+    "threshold_sweep": [
+      {
+        "policy": "flat 55%",
+        "accuracy": 0.8338,
+        "critical_recall": 0.6025,
+        "under_triage": 0.1446,
+        "false_critical": 0.0182
+      },
+      {
+        "policy": "critical 40% / high 45%",
+        "accuracy": 0.84,
+        "critical_recall": 0.6393,
+        "under_triage": 0.1378,
+        "false_critical": 0.0182
+      },
+      {
+        "policy": "critical 30% / high 40%",
+        "accuracy": 0.8423,
+        "critical_recall": 0.6598,
+        "under_triage": 0.1327,
+        "false_critical": 0.021
+      },
+      {
+        "policy": "critical 25% / high 35%",
+        "accuracy": 0.84,
+        "critical_recall": 0.6721,
+        "under_triage": 0.1305,
+        "false_critical": 0.0255
+      },
+      {
+        "policy": "critical 20% / high 30%",
+        "accuracy": 0.8446,
+        "critical_recall": 0.6885,
+        "under_triage": 0.122,
+        "false_critical": 0.0295
+      }
+    ],
+    "by_language": {
+      "en": {
+        "rows": 1054,
+        "priority": {
+          "rules_engine": {
+            "accuracy": 0.6879,
+            "critical_recall": 0.3562,
+            "under_triage": 0.3112,
+            "false_critical": 0.0
+          },
+          "ml_model": {
+            "accuracy": 0.7865,
+            "critical_recall": 0.7534,
+            "under_triage": 0.0787,
+            "false_critical": 0.1243
+          },
+          "rules_plus_ml_upgrade": {
+            "accuracy": 0.8605,
+            "critical_recall": 0.5411,
+            "under_triage": 0.1366,
+            "false_critical": 0.0019
+          }
+        },
+        "condition_accuracy": 0.7799,
+        "department_accuracy": 0.8112,
+        "confident_condition": {
+          "share": 0.5427,
+          "accuracy": 0.8304
+        }
+      },
+      "ta": {
+        "rows": 432,
+        "priority": {
+          "rules_engine": {
+            "accuracy": 0.6852,
+            "critical_recall": 0.7273,
+            "under_triage": 0.2986,
+            "false_critical": 0.0093
+          },
+          "ml_model": {
+            "accuracy": 0.838,
+            "critical_recall": 0.8182,
+            "under_triage": 0.0347,
+            "false_critical": 0.1227
+          },
+          "rules_plus_ml_upgrade": {
+            "accuracy": 0.8773,
+            "critical_recall": 0.8545,
+            "under_triage": 0.0509,
+            "false_critical": 0.0625
+          }
+        },
+        "condition_accuracy": 0.794,
+        "department_accuracy": 0.8125,
+        "confident_condition": {
+          "share": 0.6458,
+          "accuracy": 0.9462
+        }
+      },
+      "tl": {
+        "rows": 277,
+        "priority": {
+          "rules_engine": {
+            "accuracy": 0.5776,
+            "critical_recall": 0.4884,
+            "under_triage": 0.4188,
+            "false_critical": 0.0036
+          },
+          "ml_model": {
+            "accuracy": 0.7076,
+            "critical_recall": 0.7907,
+            "under_triage": 0.0794,
+            "false_critical": 0.1841
+          },
+          "rules_plus_ml_upgrade": {
+            "accuracy": 0.7184,
+            "critical_recall": 0.814,
+            "under_triage": 0.2455,
+            "false_critical": 0.0289
+          }
+        },
+        "condition_accuracy": 0.6282,
+        "department_accuracy": 0.7292,
+        "confident_condition": {
+          "share": 0.3863,
+          "accuracy": 0.8224
+        }
+      }
     }
-  }
+  },
+  "realworld_dev": {
+    "rows": 109,
+    "priority": {
+      "rules_engine": {
+        "accuracy": 0.8073,
+        "critical_recall": 0.7097,
+        "under_triage": 0.1835,
+        "false_critical": 0.0092
+      },
+      "ml_model": {
+        "accuracy": 0.9266,
+        "critical_recall": 0.9677,
+        "under_triage": 0.0092,
+        "false_critical": 0.0275
+      },
+      "rules_plus_ml_upgrade": {
+        "accuracy": 0.9817,
+        "critical_recall": 1.0,
+        "under_triage": 0.0,
+        "false_critical": 0.0092
+      }
+    },
+    "condition_accuracy": 0.9266,
+    "department_accuracy": 0.9358,
+    "confident_condition": {
+      "share": 0.8899,
+      "accuracy": 0.9794
+    }
+  },
+  "realworld_dev_by_language": {
+    "en": {
+      "rows": 39,
+      "priority": {
+        "rules_engine": {
+          "accuracy": 0.7179,
+          "critical_recall": 0.5,
+          "under_triage": 0.2564,
+          "false_critical": 0.0256
+        },
+        "ml_model": {
+          "accuracy": 0.8718,
+          "critical_recall": 1.0,
+          "under_triage": 0.0,
+          "false_critical": 0.0513
+        },
+        "rules_plus_ml_upgrade": {
+          "accuracy": 0.9744,
+          "critical_recall": 1.0,
+          "under_triage": 0.0,
+          "false_critical": 0.0256
+        }
+      },
+      "condition_accuracy": 0.9231,
+      "department_accuracy": 0.9231,
+      "confident_condition": {
+        "share": 0.8974,
+        "accuracy": 0.9714
+      }
+    },
+    "ta": {
+      "rows": 44,
+      "priority": {
+        "rules_engine": {
+          "accuracy": 0.8864,
+          "critical_recall": 0.8462,
+          "under_triage": 0.1136,
+          "false_critical": 0.0
+        },
+        "ml_model": {
+          "accuracy": 1.0,
+          "critical_recall": 1.0,
+          "under_triage": 0.0,
+          "false_critical": 0.0
+        },
+        "rules_plus_ml_upgrade": {
+          "accuracy": 1.0,
+          "critical_recall": 1.0,
+          "under_triage": 0.0,
+          "false_critical": 0.0
+        }
+      },
+      "condition_accuracy": 0.9318,
+      "department_accuracy": 0.9545,
+      "confident_condition": {
+        "share": 0.8636,
+        "accuracy": 1.0
+      }
+    },
+    "tl": {
+      "rows": 26,
+      "priority": {
+        "rules_engine": {
+          "accuracy": 0.8077,
+          "critical_recall": 0.8333,
+          "under_triage": 0.1923,
+          "false_critical": 0.0
+        },
+        "ml_model": {
+          "accuracy": 0.8846,
+          "critical_recall": 0.8333,
+          "under_triage": 0.0385,
+          "false_critical": 0.0385
+        },
+        "rules_plus_ml_upgrade": {
+          "accuracy": 0.9615,
+          "critical_recall": 1.0,
+          "under_triage": 0.0,
+          "false_critical": 0.0
+        }
+      },
+      "condition_accuracy": 0.9231,
+      "department_accuracy": 0.9231,
+      "confident_condition": {
+        "share": 0.9231,
+        "accuracy": 0.9583
+      }
+    }
+  },
+  "realworld_dev_mistakes": [
+    {
+      "text": "தேள் கொட்டி கால் வீங்கிருக்கு",
+      "lang": "ta",
+      "true": [
+        "Poisoning / bite / overdose",
+        "critical"
+      ],
+      "predicted_condition": "Severe allergic reaction",
+      "medos_priority": "critical",
+      "rules": "low"
+    },
+    {
+      "text": "I don't have any breathing trouble, just a runny nose",
+      "lang": "en",
+      "true": [
+        "Cold & cough",
+        "low"
+      ],
+      "predicted_condition": "Breathing difficulty",
+      "medos_priority": "critical",
+      "rules": "critical"
+    },
+    {
+      "text": "there is no bleeding, only a small scratch on my knee",
+      "lang": "en",
+      "true": [
+        "Skin allergy/rash",
+        "low"
+      ],
+      "predicted_condition": "Severe bleeding",
+      "medos_priority": "low",
+      "rules": "low"
+    },
+    {
+      "text": "not unconscious, just a slight headache and tired",
+      "lang": "en",
+      "true": [
+        "Mild fever",
+        "low"
+      ],
+      "predicted_condition": "Unconscious / collapsed",
+      "medos_priority": "low",
+      "rules": "low"
+    },
+    {
+      "text": "ரத்தம் வரல, சின்ன சிராய்ப்பு தான்",
+      "lang": "ta",
+      "true": [
+        "Skin allergy/rash",
+        "low"
+      ],
+      "predicted_condition": "Severe bleeding",
+      "medos_priority": "low",
+      "rules": "low"
+    },
+    {
+      "text": "மயக்கம் இல்லை, தலை லேசா வலிக்குது",
+      "lang": "ta",
+      "true": [
+        "Mild fever",
+        "low"
+      ],
+      "predicted_condition": "Unconscious / collapsed",
+      "medos_priority": "low",
+      "rules": "low"
+    },
+    {
+      "text": "ratham varala, sinna kaayam thaan",
+      "lang": "tl",
+      "true": [
+        "Skin allergy/rash",
+        "low"
+      ],
+      "predicted_condition": "Severe bleeding",
+      "medos_priority": "low",
+      "rules": "low"
+    },
+    {
+      "text": "mayakkam illa, thalai lesa valikuthu",
+      "lang": "tl",
+      "true": [
+        "Mild fever",
+        "low"
+      ],
+      "predicted_condition": "Severe migraine/headache",
+      "medos_priority": "medium",
+      "rules": "low"
+    }
+  ],
+  "realworld": {
+    "rows": 89,
+    "priority": {
+      "rules_engine": {
+        "accuracy": 0.5955,
+        "critical_recall": 0.4722,
+        "under_triage": 0.4045,
+        "false_critical": 0.0
+      },
+      "ml_model": {
+        "accuracy": 0.9551,
+        "critical_recall": 1.0,
+        "under_triage": 0.0225,
+        "false_critical": 0.0112
+      },
+      "rules_plus_ml_upgrade": {
+        "accuracy": 0.9888,
+        "critical_recall": 1.0,
+        "under_triage": 0.0112,
+        "false_critical": 0.0
+      }
+    },
+    "condition_accuracy": 0.9438,
+    "department_accuracy": 0.9663,
+    "confident_condition": {
+      "share": 0.9101,
+      "accuracy": 0.9877
+    }
+  },
+  "realworld_by_language": {
+    "en": {
+      "rows": 30,
+      "priority": {
+        "rules_engine": {
+          "accuracy": 0.5333,
+          "critical_recall": 0.3077,
+          "under_triage": 0.4667,
+          "false_critical": 0.0
+        },
+        "ml_model": {
+          "accuracy": 0.9667,
+          "critical_recall": 1.0,
+          "under_triage": 0.0,
+          "false_critical": 0.0
+        },
+        "rules_plus_ml_upgrade": {
+          "accuracy": 1.0,
+          "critical_recall": 1.0,
+          "under_triage": 0.0,
+          "false_critical": 0.0
+        }
+      },
+      "condition_accuracy": 0.9,
+      "department_accuracy": 0.9667,
+      "confident_condition": {
+        "share": 0.8667,
+        "accuracy": 1.0
+      }
+    },
+    "ta": {
+      "rows": 38,
+      "priority": {
+        "rules_engine": {
+          "accuracy": 0.6053,
+          "critical_recall": 0.5625,
+          "under_triage": 0.3947,
+          "false_critical": 0.0
+        },
+        "ml_model": {
+          "accuracy": 0.9474,
+          "critical_recall": 1.0,
+          "under_triage": 0.0263,
+          "false_critical": 0.0263
+        },
+        "rules_plus_ml_upgrade": {
+          "accuracy": 1.0,
+          "critical_recall": 1.0,
+          "under_triage": 0.0,
+          "false_critical": 0.0
+        }
+      },
+      "condition_accuracy": 0.9737,
+      "department_accuracy": 0.9737,
+      "confident_condition": {
+        "share": 0.9211,
+        "accuracy": 1.0
+      }
+    },
+    "tl": {
+      "rows": 21,
+      "priority": {
+        "rules_engine": {
+          "accuracy": 0.6667,
+          "critical_recall": 0.5714,
+          "under_triage": 0.3333,
+          "false_critical": 0.0
+        },
+        "ml_model": {
+          "accuracy": 0.9524,
+          "critical_recall": 1.0,
+          "under_triage": 0.0476,
+          "false_critical": 0.0
+        },
+        "rules_plus_ml_upgrade": {
+          "accuracy": 0.9524,
+          "critical_recall": 1.0,
+          "under_triage": 0.0476,
+          "false_critical": 0.0
+        }
+      },
+      "condition_accuracy": 0.9524,
+      "department_accuracy": 0.9524,
+      "confident_condition": {
+        "share": 0.9524,
+        "accuracy": 0.95
+      }
+    }
+  },
+  "realworld_mistakes": [
+    {
+      "text": "my brother started shaking all over and his eyes rolled back",
+      "lang": "en",
+      "true": [
+        "Seizure",
+        "critical"
+      ],
+      "predicted_condition": "Unconscious / collapsed",
+      "medos_priority": "critical",
+      "rules": "low"
+    },
+    {
+      "text": "something bit me in the garden and my leg is swelling fast, I think it was a snake",
+      "lang": "en",
+      "true": [
+        "Poisoning / bite / overdose",
+        "critical"
+      ],
+      "predicted_condition": "Severe allergic reaction",
+      "medos_priority": "critical",
+      "rules": "critical"
+    },
+    {
+      "text": "I feel run down and have no energy lately",
+      "lang": "en",
+      "true": [
+        "Unclassified complaint",
+        "low"
+      ],
+      "predicted_condition": "Unconscious / collapsed",
+      "medos_priority": "low",
+      "rules": "low"
+    },
+    {
+      "text": "நெஞ்சு வலி இல்ல, ஆனா இருமல் இருக்கு",
+      "lang": "ta",
+      "true": [
+        "Cold & cough",
+        "low"
+      ],
+      "predicted_condition": "Chest pain / suspected heart attack",
+      "medos_priority": "low",
+      "rules": "low"
+    },
+    {
+      "text": "irumal, pachai kalar sali, kaichal",
+      "lang": "tl",
+      "true": [
+        "Chest infection",
+        "medium"
+      ],
+      "predicted_condition": "Cold & cough",
+      "medos_priority": "low",
+      "rules": "low"
+    }
+  ],
+  "thresholds": {
+    "upgrade": 0.75,
+    "condition": 0.55,
+    "condition_by_level": {
+      "critical": 0.3,
+      "high": 0.4,
+      "medium": 0.55,
+      "low": 0.55
+    },
+    "support": 0.25
+  },
+  "trained_at": "2026-10-04 15:41"
 }

@@ -365,9 +365,11 @@ def triage_preview():
     res = triage.analyse(b.get("symptoms") or "", b.get("age"), b.get("sex"), b.get("vitals") or {},
                          bool(b.get("pregnant")), scheduler.conditions())
     if db.get_setting("ml_triage"):
-        pred = ml_triage.predict(b.get("symptoms") or "", b.get("age"), b.get("vitals") or {}, bool(b.get("pregnant")))
+        text = b.get("symptoms") or ""
+        pred = ml_triage.predict(text, b.get("age"), b.get("vitals") or {}, bool(b.get("pregnant")))
         res["ml"] = pred
-        res["ml_upgrade"] = ml_triage.upgrade(res["level"], pred)
+        res["ml_upgrade"] = ml_triage.upgrade(res["level"], pred, text, scheduler.conditions())
+        res["ml_condition"] = ml_triage.confident_condition(pred, text, scheduler.conditions())
     return jsonify(res)
 
 
@@ -378,7 +380,7 @@ def ml_predict():
     b = body()
     pred = ml_triage.predict(b.get("symptoms") or "", b.get("age"), b.get("vitals") or {}, bool(b.get("pregnant")))
     if pred is None:
-        raise ApiError("Describe the symptoms, or train the model with python ml/train.py", 422)
+        raise ApiError("Describe the symptoms (the model recognises English, Tamil and Tanglish), or train it with python ml/train.py", 422)
     return jsonify(pred)
 
 

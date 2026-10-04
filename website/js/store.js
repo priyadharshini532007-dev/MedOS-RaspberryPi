@@ -155,7 +155,8 @@ function register(data, source = "reception", { arrived = Date.now(), dispatchNo
   if (data.level_override && LEVEL_ORDER[data.level_override] < LEVEL_ORDER[level]) { level = data.level_override; rank = level === "critical" ? 0 : rank; levelSource = "manual"; }
   // Machine-learning second opinion (ml/train.py): may only RAISE the level, and only when confident.
   const ml = S.settings.ml_triage !== false && ML.available ? ML.predict(en || data.symptoms || "", age, vitals, !!data.pregnant) : null;
-  const mlUp = levelSource !== "manual" && !data.emergency ? ML.upgrade(level, ml) : null;
+  const allText = (data.symptoms || "") + (en ? ". " + en : "");
+  const mlUp = levelSource !== "manual" && !data.emergency ? ML.upgrade(level, ml, allText) : null;
   if (mlUp) {
     reasons.push(`ML model: ${LEVEL_LABEL[mlUp]} (${Math.round(ml.confidence * 100)}% confident${ml.topTerms.length ? ', from "' + ml.topTerms.slice(0, 2).join(", ") + '"' : ""}) — raised from ${LEVEL_LABEL[level]}`);
     level = mlUp; rank = level === "critical" ? 0 : rank; levelSource = "ml";
@@ -166,8 +167,11 @@ function register(data, source = "reception", { arrived = Date.now(), dispatchNo
     id, token, code: randCode(), day: today(), hospitalId, name: (data.name || "").trim() || null, age, sex: data.sex || null, phone: data.phone || null,
     symptoms: (data.symptoms || "").trim(), symptomsEn: en || null, translationSource: en ? data.translationSource || null : null,
     vitals, pregnant: !!data.pregnant, level, rank, base: baseScore(level, rank, r.bonus),
-    primary: r.primary_condition, conditions: r.conditions, red_flags: r.red_flags, reasons, department: r.department,
+    primary: r.primary_condition, conditions: r.conditions, red_flags: r.red_flags, reasons,
+    // the model's confident condition sets the department (the specialist queue) unless it's an emergency
+    department: mlOwnsDepartment(r, level, ml, ML.confidentCondition(ml, allText)) ? ml.department : r.department,
     rulesLevel: r.level, levelSource, mlLevel: ml ? ml.level : null, mlConfidence: ml ? ml.confidence : null,
+    mlCondition: ML.confidentCondition(ml, allText), mlConditionConfidence: ml ? ml.conditionConfidence : null,
     source, emergency: !!data.emergency, preempted: false, status: "waiting", doctorId: null, roomId: null,
     arrived, called: null, completed: null, wait_s: null, consult_s: 0, outcome: null, notes: null, voiceId: data.voiceId || null,
   };
@@ -197,7 +201,7 @@ function attachTranslation(pid, en) {
     const ml = S.settings.ml_triage !== false && ML.available ? ML.predict(en.text, p.age, p.vitals, p.pregnant) : null;
     if (ml) {
       p.mlLevel = ml.level; p.mlConfidence = ml.confidence;
-      const up = ML.upgrade(lvl, ml);
+      const up = ML.upgrade(lvl, ml, p.symptoms + ". " + en.text);
       if (up) { lvl = up; how = `the ML model reading the English (${Math.round(ml.confidence * 100)}%)`; }
     }
     if (LEVEL_ORDER[lvl] < LEVEL_ORDER[p.level]) {
@@ -449,11 +453,35 @@ function trafficFactor(t = Date.now()) {
 // ------------------------------------------------------------------ token booking: fastest time to a prescription
 // total = max(travel, wait) + consultation — the queue keeps moving while the patient travels,
 // so the shortest total, not the shortest drive or the shortest queue, wins.
-function recommendToken({ symptoms, age, pregnant, department }, origin, travel = {}) {
-  const t = analyse(symptoms || "", age, {}, pregnant);
-  const dept = department || t.department || "General Medicine";
+// Who names the department: the model only when the rules found nothing, or found a condition of a different
+// seriousness than the final priority while the model's condition matches it. When the rules matched a condition
+// that agrees with the final level, they keep it ("ரொம்ப வயிறு வலி" stays Severe abdominal pain, not "mild").
+function mlOwnsDepartment(rules, level, ml, mlCondition) {
+  if (!mlCondition || level === "critical" || ml.department === "Emergency") return false;
+  const rc = DEFAULT_CONDITIONS.find((c) => c.name === rules.primary_condition);
+  return !rc || (rc.level !== level && ml.conditionLevel === level);
+}
+
+function recommendToken({ symptoms, age, pregnant, department, symptomsEn }, origin, travel = {}) {
+  // What the complaint means: the rules read the words (Tamil and English, plus the translation when there is
+  // one); the trained model reads the English (or the original) and names the condition and its department.
+  const en = (symptomsEn || "").trim();
+  const t = analyse((symptoms || "") + (en ? ". " + en : ""), age, {}, pregnant);
+  const ml = ML.available ? ML.predict(en || symptoms || "", age, {}, pregnant) : null;
+  const allText = (symptoms || "") + (en ? ". " + en : "");
+  const mlCondition = ML.confidentCondition(ml, allText);
+  const level = ML.upgrade(t.level, ml, allText) || t.level;          // upgrade-only, as at registration
+  // Department for booking: an emergency stays Emergency; otherwise the patient's choice, then the model's
+  // confident condition, then the rules.
+  let dept, deptSource;
+  if (level === "critical") { dept = "Emergency"; deptSource = "rules"; }
+  else if (department) { dept = department; deptSource = "you"; }
+  else if (mlOwnsDepartment(t, level, ml, mlCondition)) { dept = ml.department; deptSource = "ml"; }
+  else { dept = t.department || "General Medicine"; deptSource = "rules"; }
+  const understood = deptSource === "ml" ? { name: mlCondition, source: "ml", confidence: ml.conditionConfidence } : { name: t.primary_condition, source: "rules" };
+  const tl = { ...t, level, base_score: baseScore(level, level === "critical" ? 0 : t.rank, t.bonus) };
   const durs = durations();
-  const consult = durs[t.level];
+  const consult = durs[level];
   const rows = HOSPITALS.map((h) => {
     const live = hospitalLive(h);
     const { docs, specialist } = doctorsFor(h, live, dept);
@@ -461,10 +489,10 @@ function recommendToken({ symptoms, age, pregnant, department }, origin, travel 
     const availableNow = docs.filter((d) => d.status === "available").length;
     let wait, ahead;
     if (h.self) {
-      wait = selfWaitMin(t.level, t.rank, t.base_score);
-      ahead = readyQueue().filter((p) => p.score.total >= t.base_score).length;
+      wait = selfWaitMin(tl.level, tl.rank, tl.base_score);
+      ahead = readyQueue().filter((p) => p.score.total >= tl.base_score).length;
     } else {
-      const share = { critical: 0, high: 0.3, medium: 0.7, low: 1 }[t.level];
+      const share = { critical: 0, high: 0.3, medium: 0.7, low: 1 }[tl.level];
       ahead = Math.round((live.byDept[dept] ?? live.byDept["General Medicine"] ?? 0) * share);
       if (onDuty.length) {
         const r = rng(h.id * 31 + Math.floor(Date.now() / 180000));
@@ -487,7 +515,7 @@ function recommendToken({ symptoms, age, pregnant, department }, origin, travel 
   rows.sort((a, b) => (b.eligible - a.eligible) || (a.total ?? 1e9) - (b.total ?? 1e9) || a.travelMin - b.travelMin);
   const best = rows[0] && rows[0].eligible ? rows[0] : null;
   const bestSpecialist = rows.find((r) => r.eligible && r.specialist) || null;
-  return { triage: t, dept, consult, rows, best, bestSpecialist: bestSpecialist && bestSpecialist !== best ? bestSpecialist : null };
+  return { triage: tl, dept, deptSource, understood, ml, mlCondition, consult, rows, best, bestSpecialist: bestSpecialist && bestSpecialist !== best ? bestSpecialist : null };
 }
 
 function bookToken({ name, age, sex, phone, symptoms, symptomsEn, translationSource, pregnant, voiceId }, row, origin) {

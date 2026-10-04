@@ -18,6 +18,10 @@ How a row is made
      by pregnancy with abdominal pain or bleeding. About 2% of labels are then shifted one level to
      simulate the disagreement between real clinicians.
 
+Languages: half the rows are English; 35% are spoken Tamil in Tamil script and 15% Tanglish (Tamil typed in
+English letters), from ml/phrases_ta.py, so the model learns what a Tamil complaint means. Every row also
+records its English meaning, the condition and the department, which booking uses to pick a specialist.
+
 Run:  python ml/generate_dataset.py            → ml/data/triage_synthetic.csv
 """
 from __future__ import annotations
@@ -29,11 +33,42 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "ml"))
 
 from medos.triage import DEFAULT_CONDITIONS, LEVELS, LEVEL_ORDER  # noqa: E402
+from medos.triage_tamil import TAMIL_KEYWORDS  # noqa: E402
+from phrases_ta import (TA, TA_DURATIONS, TA_EXTRAS, TA_NEGATIONS, TA_TEMPLATES, TA_UNCLASSIFIED, TA_WHO,  # noqa: E402
+                        TL, TL_DURATIONS, TL_TEMPLATES, TL_UNCLASSIFIED, TL_WHO)
+from phrases_more import MIX_FRAMES, TA_MORE, TL_MORE  # noqa: E402
+
+# More Tamil / Tanglish phrasings (ml/phrases_more.py), merged in.
+for _name, _items in TA_MORE.items():
+    TA[_name] = TA[_name] + _items
+for _name, _items in TL_MORE.items():
+    TL[_name] = TL[_name] + _items
 
 SEED = 2024
-N_ROWS = 8000
+N_ROWS = 18000
+# Languages: English, Tamil (Tamil script) and Tanglish (Tamil in English letters).
+# mx = code-mixed: Tamil with English medical words in the middle ("எனக்கு chest pain இருக்கு"), how people really speak.
+LANG_SHARE = {"en": 0.44, "ta": 0.30, "tl": 0.14, "mx": 0.12}
+# Tamil keywords (and Tanglish ones) are kept out of the English rows.
+TAMIL_SET = {name: set(kws) for name, kws in TAMIL_KEYWORDS.items()}
+TAMIL_CHARS = __import__("re").compile("[஀-௿]")
+# Spoken variation applied to Tamil rows: (word, alternatives that mean the same).
+TA_VARIANTS = [("வலிக்குது", ["வலிக்குது", "வலிக்கிறது", "வலியா இருக்கு", "வலி இருக்கு"]),
+               ("ரொம்ப", ["ரொம்ப", "அதிகமா", "ரொம்பவே"]),
+               ("முடியல", ["முடியல", "முடியவில்லை", "முடியலை"]),
+               ("இருக்கு", ["இருக்கு", "இருக்கிறது"]),
+               ("வருது", ["வருது", "வருகிறது"]),
+               ("திடீர்னு", ["திடீர்னு", "திடீரென்று"]),
+               ("பயங்கரமா", ["பயங்கரமா", "கடுமையா", "ரொம்ப அதிகமா"]),
+               ("குடிச்சுடுச்சு", ["குடிச்சுடுச்சு", "குடிச்சுட்டான்", "குடிச்சிருச்சு"]),
+               ("வீங்கிடுச்சு", ["வீங்கிடுச்சு", "வீங்கிருக்கு", "வீங்கிப்போச்சு"]),
+               ("முடிஞ்சிருச்சு", ["முடிஞ்சிருச்சு", "முடிஞ்சுது"]),
+               ("வலி", ["வலி", "வலி", "வலின்னு"])]
+# Tanglish has no standard spelling: the same word is typed many ways (valikuthu / valikkuthu / valikudhu).
+TL_SPELLINGS = [("kk", "k"), ("tt", "t"), ("aa", "a"), ("ee", "i"), ("oo", "u"), ("zh", "l"), ("dh", "th"), ("th", "dh"), ("ll", "l"), ("pp", "p"), ("ai", "ei")]
 OUT = ROOT / "ml" / "data" / "triage_synthetic.csv"
 
 # Everyday ways of describing each condition that the keyword rules do NOT contain.
@@ -107,6 +142,24 @@ PARAPHRASES = {
         "need a fitness certificate"],
 }
 
+# More everyday English (added after the first evaluation): how people describe the same things differently.
+for _name, _more in {
+    "Breathing difficulty": ["can only get a few words out before needing a breath", "wheezing and struggling for air even while resting",
+                             "pulling hard to breathe, ribs sucking in", "stops after every sentence to catch breath", "breath is very shallow and fast"],
+    "Seizure": ["whole body went stiff and then started jerking", "fitting on the floor, not responding", "eyes rolling and arms twitching uncontrollably"],
+    "Severe abdominal pain": ["sharp stabbing pain low on one side that gets worse when walking", "doubled over with stomach cramps",
+                              "pain in the lower belly that won't ease and he feels feverish"],
+    "Persistent vomiting": ["been sick again and again since morning, nothing stays down", "retching all day and cannot drink water",
+                            "throwing up every time she eats or drinks"],
+    "Fracture": ["fell on an outstretched hand and the forearm looks crooked", "heard a snap and now the leg cannot take any weight"],
+    "Chest infection": ["rattly cough with coloured phlegm and fever for several days", "coughing up green mucus, feels hot and tired"],
+    "Unconscious / collapsed": ["dropped to the floor suddenly and does not respond to shouting", "found slumped over and cannot be woken"],
+    "Cold & cough": ["tickly cough and a runny nose", "sneezing a lot with a stuffy nose", "dry cough since the weekend, no fever"],
+    "Unclassified complaint": [],
+}.items():
+    if _name in PARAPHRASES:
+        PARAPHRASES[_name] = PARAPHRASES[_name] + _more
+
 UNCLASSIFIED = ["feeling tired and weak", "not feeling well since two days", "general weakness", "loss of appetite",
                 "dizziness on standing", "pain in the leg muscles", "sleep problems"]
 
@@ -119,7 +172,11 @@ TEMPLATES = ["{s} {d}", "having {s} {d}", "patient complains of {s} {d}", "{s}",
              "my {who} has {s} {d}", "{s} {d} and {extra}", "came with {s} {d}"]
 EXTRAS = ["mild cough", "slight headache", "feeling tired", "not eating well", "body pains", "a little nausea", "poor sleep"]
 WHO = ["father", "mother", "son", "daughter", "husband", "wife", "grandmother", "neighbour"]
-NEGATIONS = ["no chest pain", "no breathing difficulty", "no vomiting", "no fever", "not unconscious", "no bleeding"]
+NEGATIONS = ["no chest pain", "no breathing difficulty", "no vomiting", "no fever", "not unconscious", "no bleeding", "no seizures",
+             "no shortness of breath", "no chest tightness", "never fainted", "without any bleeding", "denies chest pain"]
+# Tamil and Tanglish deny after the word ("நெஞ்சு வலி இல்லை"); the model must learn that this cancels the symptom.
+TL_NEGATIONS = ["nenju vali illa", "moochu thinaral illa", "kaichal illa", "vaanthi illa", "ratham varala", "mayakkam illa", "valippu illa"]
+NEG_RATE = 0.30     # share of rows with a denied symptom somewhere in the sentence
 
 # Prefix keywords in the protocol end in '*': give them a natural ending for the text.
 STAR_ENDINGS = {"wheez": "wheezing", "dislocat": "dislocated shoulder", "dehydrat": "dehydrated", "breath": "breathing",
@@ -185,28 +242,112 @@ def label_for(level: str, cond_name: str, text: str, vitals: dict, age: int, pre
         level = raise_to(level, "high")
     if pain is not None and pain >= 8:
         level = raise_to(level, "medium")
-    if pregnant and (cond_name in ("Severe abdominal pain", "Stomach pain (mild)") or "bleeding" in text):
+    denied_bleeding = any(d in text for d in ("no bleeding", "without any bleeding", "ரத்தம் வரல", "ratham varala"))
+    if pregnant and (cond_name in ("Severe abdominal pain", "Stomach pain (mild)") or ("bleeding" in text and not denied_bleeding)):
         level = raise_to(level, "high")
     return level
 
 
+def _phrase_parts(kw: str) -> str:
+    """A Tamil / Tanglish protocol keyword as plain words: "நெஞ்சு*+வலி*" → "நெஞ்சு வலி"."""
+    return " ".join(p.strip().rstrip("*") for p in kw.split("+") if p.strip())
+
+
+def _vary_tamil(rnd: random.Random, text: str) -> str:
+    """Natural spoken variation, so the model learns meaning rather than memorising exact sentences."""
+    for word, alternatives in TA_VARIANTS:
+        if word in text and rnd.random() < 0.5:
+            text = text.replace(word, rnd.choice(alternatives), 1)
+    return text
+
+
+def _vary_tanglish(rnd: random.Random, text: str) -> str:
+    """Typed-by-hand spelling variation: each rewrite is applied to a word only some of the time."""
+    out = []
+    for word in text.split(" "):
+        for a, b in TL_SPELLINGS:
+            if a in word and rnd.random() < 0.18:
+                word = word.replace(a, b)
+        out.append(word)
+    return " ".join(out)
+
+
+def _negation(rnd: random.Random, options: list, phrase: str):
+    """A negated extra symptom that doesn't contradict the complaint ("no chest pain" on a chest-pain row)."""
+    picks = [n for n in options if not any(w in phrase.lower() for w in n.lower().split()[:2] if len(w) > 3)]
+    return rnd.choice(picks) if picks else None
+
+
+def _describe(rnd: random.Random, lang: str, cond, name: str):
+    """(phrase, English meaning, how it was phrased) in the chosen language."""
+    if lang == "en":
+        if cond is None:
+            p = rnd.choice(UNCLASSIFIED)
+            return p, p, "unclassified"
+        english_kw = [k for k in cond["keywords"] if k not in TAMIL_SET.get(name, set())]
+        if rnd.random() < 0.45 or not PARAPHRASES.get(name):
+            p = keyword_text(rnd.choice(english_kw))
+            return p, p, "keyword"
+        p = rnd.choice(PARAPHRASES[name])
+        return p, p, "paraphrase"
+    if lang == "ta":
+        if cond is None:
+            p, meaning = rnd.choice(TA_UNCLASSIFIED)
+            return p, meaning, "unclassified"
+        tamil_kw = [k for k in TAMIL_KEYWORDS.get(name, []) if TAMIL_CHARS.search(k)]   # a list: fixed order
+        if tamil_kw and rnd.random() < 0.25:
+            return _phrase_parts(rnd.choice(tamil_kw)), name, "keyword"
+        p, meaning = rnd.choice(TA[name])
+        return p, meaning, "paraphrase"
+    if lang == "mx":
+        if cond is None:
+            p, meaning = rnd.choice(TA_UNCLASSIFIED)
+            return p, meaning, "unclassified"
+        english = [keyword_text(k) for k in cond["keywords"] if k not in TAMIL_SET.get(name, set())]
+        english = [e for e in english if 1 <= len(e.split()) <= 3 and e.isascii()] or [keyword_text(cond["keywords"][0])]
+        p = rnd.choice(english)
+        return p, p, "keyword"
+    # Tanglish
+    if cond is None:
+        return rnd.choice(TL_UNCLASSIFIED), "not feeling well", "unclassified"
+    roman_kw = [k for k in TAMIL_KEYWORDS.get(name, []) if not TAMIL_CHARS.search(k)]
+    if roman_kw and rnd.random() < 0.3:
+        return _phrase_parts(rnd.choice(roman_kw)), name, "keyword"
+    return rnd.choice(TL[name]), name, "paraphrase"
+
+
 def make_row(rnd: random.Random, by_level: dict) -> dict:
     level = rnd.choices(LEVELS, weights=[LEVEL_SHARE[x] for x in LEVELS])[0]
+    lang = rnd.choices(list(LANG_SHARE), weights=list(LANG_SHARE.values()))[0]
     if level == "low" and rnd.random() < 0.06:
-        cond, name, kind = None, "Unclassified complaint", "unclassified"
-        phrase = rnd.choice(UNCLASSIFIED)
+        cond, name, dept = None, "Unclassified complaint", "General Medicine"
     else:
         cond = rnd.choice(by_level[level])
-        name = cond["name"]
-        # 45% protocol keyword, 55% everyday paraphrase the rules don't know
-        if rnd.random() < 0.45 or not PARAPHRASES.get(name):
-            phrase, kind = keyword_text(rnd.choice(cond["keywords"])), "keyword"
+        name, dept = cond["name"], cond["department"]
+    phrase, meaning, kind = _describe(rnd, lang, cond, name)
+    base = phrase                     # before variation and framing: the held-out tests group by this
+
+    if lang == "en":
+        text = rnd.choice(TEMPLATES).format(s=phrase, d=rnd.choice(DURATIONS), extra=rnd.choice(EXTRAS), who=rnd.choice(WHO))
+        neg = _negation(rnd, NEGATIONS, phrase) if rnd.random() < NEG_RATE else None
+    elif lang == "ta":
+        phrase = _vary_tamil(rnd, phrase)
+        text = rnd.choice(TA_TEMPLATES).format(s=phrase, d=rnd.choice(TA_DURATIONS), extra=rnd.choice(TA_EXTRAS), who=rnd.choice(TA_WHO))
+        neg = _negation(rnd, TA_NEGATIONS, phrase) if rnd.random() < NEG_RATE else None
+    elif lang == "mx":
+        if kind == "unclassified":
+            text = rnd.choice(TA_TEMPLATES).format(s=phrase, d=rnd.choice(TA_DURATIONS), extra=rnd.choice(TA_EXTRAS), who=rnd.choice(TA_WHO))
         else:
-            phrase, kind = rnd.choice(PARAPHRASES[name]), "paraphrase"
-    tpl = rnd.choice(TEMPLATES)
-    text = tpl.format(s=phrase, d=rnd.choice(DURATIONS), extra=rnd.choice(EXTRAS), who=rnd.choice(WHO))
-    if rnd.random() < 0.08:
-        text += ", " + rnd.choice(NEGATIONS)
+            text = rnd.choice(MIX_FRAMES).format(e=phrase, who=rnd.choice(TA_WHO))
+        neg = _negation(rnd, TA_NEGATIONS + NEGATIONS[:4], phrase) if rnd.random() < NEG_RATE else None
+    else:
+        text = rnd.choice(TL_TEMPLATES).format(s=_vary_tanglish(rnd, phrase), d=rnd.choice(TL_DURATIONS), who=rnd.choice(TL_WHO))
+        neg = _negation(rnd, TL_NEGATIONS, phrase) if rnd.random() < NEG_RATE else None
+    if neg:
+        if rnd.random() < 0.35:
+            text = neg + (", but " if lang == "en" else ", ஆனா " if lang in ("ta", "mx") else ", aana ") + text
+        else:
+            text += ", " + neg
     text = " ".join(text.split()).strip(" ,")
     text = text[0].upper() + text[1:]
 
@@ -215,15 +356,14 @@ def make_row(rnd: random.Random, by_level: dict) -> dict:
     sex = rnd.choice(["male", "female"])
     pregnant = sex == "female" and 18 <= age <= 42 and rnd.random() < 0.08
     vitals = sample_vitals(rnd, level, name)
-    label = label_for(level, name, text.lower(), vitals, age, pregnant)
+    label = label_for(level, name, (text + " " + meaning).lower(), vitals, age, pregnant)
     if rnd.random() < 0.02:   # clinicians don't always agree: shift a few labels by one level
         i = LEVELS.index(label) + rnd.choice([-1, 1])
         label = LEVELS[max(0, min(3, i))]
-    return {"symptoms": text, "age": age, "sex": sex, "pregnant": int(pregnant),
+    return {"symptoms": text, "lang": lang, "meaning": meaning, "age": age, "sex": sex, "pregnant": int(pregnant),
             "temp": vitals.get("temp", ""), "pulse": vitals.get("pulse", ""), "spo2": vitals.get("spo2", ""),
             "bp_sys": vitals.get("bp_sys", ""), "pain": vitals.get("pain", ""),
-            "condition": name, "phrasing": kind,
-            "priority": label}
+            "condition": name, "department": dept, "phrasing": kind, "base": base, "priority": label}
 
 
 def main() -> None:
@@ -236,8 +376,10 @@ def main() -> None:
         w.writeheader()
         w.writerows(rows)
     counts = {lvl: sum(r["priority"] == lvl for r in rows) for lvl in LEVELS}
+    langs = {lg: sum(r["lang"] == lg for r in rows) for lg in LANG_SHARE}
     print("Wrote %d synthetic rows to %s" % (len(rows), OUT.relative_to(ROOT)))
     print("Priority mix: " + ", ".join("%s %d" % (k, v) for k, v in counts.items()))
+    print("Languages: " + ", ".join("%s %d" % (k, v) for k, v in langs.items()))
 
 
 if __name__ == "__main__":

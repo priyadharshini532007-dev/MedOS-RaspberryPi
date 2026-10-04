@@ -38,7 +38,6 @@ PAGES.home = {
   title: "MedOS — care in order of need",
   full: true,
   render(el) {
-    const m = ML.available ? ML.metrics : null;
     el.innerHTML = `<div class="lp">
       <header class="lp-nav">
         <a class="lp-brand" href="#/"><span class="brand-mark">${icon("pulse")}</span><span><b>MedOS</b><small>Smart hospital scheduler</small></span></a>
@@ -88,8 +87,8 @@ PAGES.home = {
       <section class="lp-section" id="how">
         <div class="lp-head"><span class="lp-kicker">How it works</span><h2>From “I'm not well” to a doctor, in four steps</h2></div>
         <ol class="lp-steps">
-          ${[["mic", "Tell us what's wrong", "Type it, or just speak — in English or Tamil. Name, age and symptoms are filled in for you."],
-            ["shield", "Instant triage", "Rules from the hospital's protocol and a trained ML model set the priority: Critical, High, Medium or Low."],
+          ${[["mic", "Answer three questions", "Just speak, in English or Tamil: your name, your age, then what's wrong — one question at a time, so nothing gets mixed up."],
+            ["shield", "Instant triage", "Rules from the hospital's protocol and a trained ML model that understands Tamil set the priority and the department."],
             ["route", "The fastest hospital", "We compare every hospital's drive time, queue and doctors on duty, and recommend the one that sees you soonest."],
             ["stetho", "Seen in order of need", "You get a token and live position. Emergencies interrupt; long waits climb, so nobody is forgotten."]]
             .map(([ic, t, d], i) => `<li class="lp-step"><span class="lp-step-n">${i + 1}</span><span class="lp-step-ic">${icon(ic)}</span><h3>${t}</h3><p>${d}</p></li>`).join("")}
@@ -99,8 +98,8 @@ PAGES.home = {
       <section class="lp-section lp-alt" id="features">
         <div class="lp-head"><span class="lp-kicker">Features</span><h2>Everything a busy emergency department needs</h2></div>
         <div class="lp-features">
-          ${[["mic", "Voice check-in", "Record until you press Stop, pause and resume. English and Tamil, with an English translation for staff.", "#/voice"],
-            ["cpu", "Smart triage + ML", `Protocol rules plus a model trained on ${m ? m.train_rows.toLocaleString() : "thousands of"} cases. It can raise a priority, never lower one.`, "#/about"],
+          ${[["mic", "Voice check-in", "Three short questions — name, age, problem — in English or Tamil, with an English translation for staff.", "#/voice"],
+            ["cpu", "Smart triage + ML", "Protocol rules plus a model trained on thousands of English, Tamil and Tanglish cases. It can raise a priority, never lower one.", "#/about"],
             ["route", "Fastest-hospital routing", "Real road routes, live queues and doctors on duty across 8 hospitals, ranked by time to prescription.", "#/patient"],
             ["siren", "Ambulance SOS", "Hold to send the nearest free ambulance, and watch it move to you and on to the hospital.", "#/patient/ambulance"],
             ["desk", "Live staff dashboards", "Reception, doctor, pharmacy and the waiting-room TV update the moment anything changes.", "#/dashboard"],
@@ -159,6 +158,7 @@ PAGES.home = {
 
     const draw = () => {
       const s = liveSummary();
+      const m = ML.available ? ML.metrics : null;
       $("#lp-hosp", el).textContent = ` · ${S.settings.hospital_name} · ${fmtClock(Date.now())}`;
       $("#lp-stats", el).innerHTML = `<div><b>${s.waiting}</b><span>waiting</span></div><div><b>${s.free}<small>/${s.docsTotal}</small></b><span>doctors free</span></div>
         <div><b>${s.avgWait == null ? "—" : fmtMin(s.avgWait)}</b><span>average wait</span></div>`;

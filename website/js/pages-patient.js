@@ -84,7 +84,9 @@ PAGES.patient = {
             <div class="card-head"><h2 class="t-h3">${icon("mic")}1 · What's wrong?</h2><span id="tri"></span></div>
             <div class="card-body stack">
               <div id="vbox"></div>
-              <div class="chips" id="samples"></div>
+              <div id="ready"></div>
+              <details class="more"><summary>${icon("keyboard")}Or type it, or try an example</summary>
+                <div class="chips" id="samples" style="margin-top:8px"></div></details>
               <form id="pform" class="form-grid" autocomplete="off">
                 <label class="field c6"><span>Symptoms</span><textarea class="textarea" name="symptoms" required placeholder="e.g. Ear pain since last night, mild fever"></textarea></label>
                 <label class="field c3"><span>Name</span><input class="input" name="name" required autocomplete="name"></label>
@@ -136,9 +138,20 @@ PAGES.patient = {
 
     $("#samples", el).innerHTML = SAMPLE_PHRASES.slice(0, 4).map((s) => `<button class="chip-btn" type="button">${esc(s)}</button>`).join("");
     $("#samples", el).addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) fill(parseCheckin(b.textContent)); });
-    mountVoice($("#vbox", el), { source: "patient", onResult: (r) => {
-      const v = addVoiceInput({ transcript: r.text, fields: r.fields, source: "patient booking", audioId: r.audioId, durationS: r.durationS, lang: r.lang });
-      voiceId = v.id; fill(r.fields);
+    // Voice: three questions — name, age, problem — each answer fills only its own field.
+    let guidedDone = false;
+    const guided = mountGuidedVoice($("#vbox", el), { source: "patient", onDone: (r) => {
+      const v = addVoiceInput({ transcript: r.transcripts.problem || r.symptoms, fields: { name: r.name, age: r.age, symptoms: r.symptoms },
+        source: "patient booking (3 questions)", audioId: r.audioId, durationS: r.durationS, lang: r.lang });
+      voiceId = v.id;
+      form.name.value = r.name || "";
+      form.age.value = r.age == null ? "" : String(r.age);
+      form.symptoms.value = r.symptoms || "";
+      if (r.symptomsEn) { en = { text: r.symptomsEn, source: r.translationSource, for: form.symptoms.value.trim() }; enAsked = en.for; }
+      guidedDone = true;
+      update(true);
+      const ready = $("#ready", el);
+      if (ready) ready.scrollIntoView({ behavior: "smooth", block: "center" });
     } });
 
     function fill(f) {
@@ -150,8 +163,12 @@ PAGES.patient = {
       if (f.pregnant) form.pregnant.checked = true;
       update();
     }
-    const data = () => ({ name: form.name.value.trim(), age: form.age.value ? +form.age.value : null, sex: form.sex.value, phone: form.phone.value.trim(),
-      symptoms: form.symptoms.value.trim(), pregnant: form.pregnant.checked, department: form.dept.value || null });
+    const data = () => {
+      const symptoms = form.symptoms.value.trim();
+      return { name: form.name.value.trim(), age: form.age.value !== "" ? +form.age.value : null, sex: form.sex.value, phone: form.phone.value.trim(),
+        symptoms, pregnant: form.pregnant.checked, department: form.dept.value || null,
+        symptomsEn: en && en.for === symptoms && en.text ? en.text : null };
+    };
 
     async function refreshTravel() {
       const o = ORIGIN;
@@ -179,18 +196,19 @@ PAGES.patient = {
     function update(redrawRoutes = true) {
       const d = data();
       store("medos.patient.draft", { ...d, dept: form.dept.value });
-      const t = analyse(d.symptoms, d.age, {}, d.pregnant);
-      $("#tri", el).innerHTML = d.symptoms ? `${prio(t.level)} <span class="t-small muted">${esc(t.department)}</span>` : "";
+      rec = recommendToken(d, ORIGIN, travel);
+      const t = rec.triage;   // rules (Tamil + English + translation), raised by the model when it is confident
+      const deptFrom = { ml: "from the ML model", you: "your choice", rules: "from the rules" }[rec.deptSource];
+      $("#tri", el).innerHTML = d.symptoms ? `${prio(t.level)} <span class="t-small muted" title="Department ${deptFrom}">${esc(rec.dept)}</span>` : "";
       // Tamil symptoms: show the English translation, and let the English-trained model read it
       const tamil = Translate.isTamil(d.symptoms);
       if (!tamil) en = null;
       else if (!en || en.for !== d.symptoms) translateNow(d.symptoms);
       $("#en-note", el).innerHTML = tamil ? englishLine(en && en.for === d.symptoms && en.text ? en : null, { pending: !en || en.for !== d.symptoms }) : "";
       const mlText = tamil && en && en.for === d.symptoms ? en.text : d.symptoms;
-      $("#ml-note", el).innerHTML = d.symptoms ? mlPanel(ML.predict(mlText, d.age, {}, d.pregnant), t.level, { compact: true }) : "";
+      $("#ml-note", el).innerHTML = d.symptoms ? mlPanel(ML.predict(mlText, d.age, {}, d.pregnant), t.level, { compact: true, text: d.symptoms + (mlText !== d.symptoms ? ". " + mlText : "") }) : "";
       $("#crit-note", el).innerHTML = d.symptoms && t.level === "critical"
         ? `<div class="notice bad">${icon("siren")}<div><b>This sounds like an emergency (${esc(t.primary_condition)}).</b> Don't travel on your own — <a href="#/patient/ambulance" data-to-amb>book an ambulance</a> or call 108.</div></div>` : "";
-      rec = recommendToken(d, ORIGIN, travel);
       if (!picked || !selected || !rec.rows.find((r) => r.id === selected && r.eligible)) selected = rec.best ? rec.best.id : null;
       renderList();
       renderMap(redrawRoutes);
@@ -231,12 +249,46 @@ PAGES.patient = {
       $("#book", el).disabled = !sel || !sel.eligible;
       $("#book", el).innerHTML = sel ? `${icon("ticket")}Book token at ${esc(sel.h.short)} · ${fmtMin(sel.total)}` : `${icon("ticket")}Book token`;
       renderChooser(sel);
+      renderReady(sel);
       $("#sel-card", el).innerHTML = sel && sel.eligible ? `<div class="card card-pad stack-sm" style="padding:12px 14px">
           <div class="row-between"><b>${esc(sel.h.short)}</b>${sel === rec.best ? `<span class="pill brand">${icon("crown")}Fastest</span>` : ""}</div>
           <div class="t-small muted">${sel.travelMin} min drive · ${sel.wait} min queue · ${Math.round(sel.consult)} min consult</div>
           <a class="btn sm" href="${Maps.googleMapsLink(ORIGIN, sel.h)}" target="_blank" rel="noopener">${icon("nav")}Open in Google Maps</a></div>` : "";
     }
     const select = (id) => { selected = id; picked = true; renderList(); renderMap(true); };
+
+    // After the three voice questions: what we understood, the recommended hospital, and one button to book.
+    function renderReady(sel) {
+      const box = $("#ready", el);
+      const d = data();
+      if (!guidedDone || !d.symptoms) { box.innerHTML = ""; return; }
+      const t = rec.triage;
+      const crit = t.level === "critical";
+      const understood = rec.understood.source === "ml"
+        ? `${esc(rec.understood.name)} <span class="muted">· ${esc(rec.dept)} · ML model ${Math.round(rec.understood.confidence * 100)}% sure</span>`
+        : `${esc(rec.understood.name || t.primary_condition)} <span class="muted">· ${esc(rec.dept)} · rules${rec.mlCondition && rec.mlCondition !== t.primary_condition ? ` · the model reads it as “${esc(rec.mlCondition)}”` : ""}</span>`;
+      box.innerHTML = `<div class="ready-card">
+        <div class="ready-head">${icon("check")}<b>Ready to book</b></div>
+        <dl class="ready-list">
+          <div><dt>Name</dt><dd>${esc(d.name || "—")}</dd></div>
+          <div><dt>Age</dt><dd>${d.age == null ? "—" : d.age === 0 ? "Under 1 year" : d.age + " years"}</dd></div>
+          <div class="wide"><dt>Problem</dt><dd>${esc(d.symptoms)}${d.symptomsEn ? `<br><span class="ready-en">In English: ${esc(d.symptomsEn)}</span>` : ""}</dd></div>
+          <div class="wide"><dt>Understood as</dt><dd>${understood}</dd></div>
+          <div><dt>Priority</dt><dd>${prio(t.level)}</dd></div>
+        </dl>
+        ${crit ? `<div class="notice bad">${icon("siren")}<div><b>This sounds like an emergency.</b> Please don't travel on your own.</div></div>
+          <a class="btn danger lg block" href="#/patient/ambulance" data-to-amb>${icon("ambulance")}Book an ambulance</a>` : ""}
+        ${sel && sel.eligible ? `<div class="ready-hosp">${icon("crown")}<div><b>${esc(sel.h.name)}</b><small>${fmtMin(sel.total)} to a prescription · ${sel.travelMin} min away · ${sel.availableNow} doctor${sel.availableNow === 1 ? "" : "s"} free${sel.specialist ? ` · ${esc(rec.dept)} doctors` : ""}</small></div></div>
+          <button type="button" class="btn ${crit ? "" : "primary"} lg block" data-book>${icon("ticket")}${crit ? "Book a token anyway" : "Book token at " + esc(sel.h.short)} · ${fmtMin(sel.total)}</button>
+          ${rec.bestSpecialist && sel === rec.best ? `<button type="button" class="btn sm" data-spec="${rec.bestSpecialist.id}">${icon("stetho")}${esc(rec.dept)} specialist: ${esc(rec.bestSpecialist.h.short)} · ${fmtMin(rec.bestSpecialist.total)}</button>` : ""}
+          <button type="button" class="btn ghost sm" data-other>${icon("hospital")}Choose a different hospital</button>`
+          : `<p class="t-small muted">No hospital has a doctor for this right now.</p>`}
+      </div>`;
+      const bk = $("[data-book]", box); if (bk) bk.addEventListener("click", () => doBook());
+      const sp = $("[data-spec]", box); if (sp) sp.addEventListener("click", () => select(+sp.dataset.spec));
+      const ot = $("[data-other]", box); if (ot) ot.addEventListener("click", () => $("#choose-card", el).scrollIntoView({ behavior: "smooth", block: "start" }));
+      const am = $("[data-to-amb]", box); if (am) am.addEventListener("click", () => store("medos.amb.draft", { condition: d.symptoms, name: d.name, age: d.age }));
+    }
 
     // Step 3: the hospital dropdown, shown once the symptoms are entered. Fastest first; hospitals that
     // can't see the patient right now are listed but disabled. It stays in step with the cards and map.
@@ -316,7 +368,7 @@ PAGES.patient = {
     refreshTravel();
     const off = onChange(debounceFor(el, (why) => { if (why !== "booking") update(false); }, 500));
     const iv = setInterval(() => update(false), 30000);
-    return () => { off(); clearInterval(iv); view.destroy(); };
+    return () => { off(); clearInterval(iv); guided.stop(); view.destroy(); };
   },
 };
 

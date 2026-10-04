@@ -28,9 +28,14 @@ const TAMIL_KEYWORDS = {
   "மூச்சு*+சிரம*",
   "மூச்சு வாங்க*",
   "மூச்சு இரைப்*",
+  "மூச்சே வர*",
+  "மூச்சு*+வரவே இல்*",
+  "மூச்சு*+வரல*",
   "moochu thinaral*",
   "moochu+mudiyala",
-  "moochu+kashtam"
+  "moochu+kashtam",
+  "moochu*+varave ill*",
+  "moochu*+varala*"
  ],
  "Stroke signs": [
   "பக்கவாத*",
@@ -49,15 +54,23 @@ const TAMIL_KEYWORDS = {
   "மயக்கம் அடை*",
   "மயக்கமாகி விழு*",
   "நினைவு இழ*",
-  "சுயநினைவு*+இல்*",
+  "சுயநினைவு இல்*",
   "நினைவு இல்லாம*",
   "எழுந்திருக்கல*",
+  "எழுந்திருக்கவே இல்*",
+  "கண்ணே திறக்க*",
   "பேச்சு மூச்சு இல்*",
-  "mayangi vizhunthu*"
+  "mayangi vizhunthu*",
+  "ezhunthirikkave ill*",
+  "ezhunthirikkala*"
  ],
  "Severe bleeding": [
-  "ரத்தம்*+நிற்க*",
-  "இரத்தம்*+நிற்க*",
+  "ரத்தம்*+நிற்கவே இல்*",
+  "ரத்தம்*+நிக்கவே இல்*",
+  "ரத்தம்*+நிக்கல*",
+  "ரத்தம்*+நிற்கல*",
+  "இரத்தம்*+நிற்கவே இல்*",
+  "இரத்தம்*+நிற்கல*",
   "ரத்தப்போக்கு*",
   "இரத்தப்போக்கு*",
   "ரத்த வாந்தி*",
@@ -69,7 +82,12 @@ const TAMIL_KEYWORDS = {
   "ரத்தம் கொட்டு*",
   "ரத்தம் வழி*",
   "ratham+nikkala",
-  "ratha vaanthi"
+  "ratha vaanthi",
+  "ratham*+nikkave ill*",
+  "ratham*+nikkala*",
+  "ratham*+nikka*",
+  "ரத்தம்*+நிக்காம*",
+  "ரத்தம்*+நிற்காம*"
  ],
  "Seizure": [
   "வலிப்பு*",
@@ -77,7 +95,8 @@ const TAMIL_KEYWORDS = {
   "பிட்ஸ்*",
   "காக்காய் வலிப்பு*",
   "valippu",
-  "fits vandhu*"
+  "fits vandhu*",
+  "valippu*+theliyave ill*"
  ],
  "Severe allergic reaction": [
   "தொண்டை வீங்*",
@@ -91,13 +110,20 @@ const TAMIL_KEYWORDS = {
   "ஆக்சிடென்ட்*",
   "ஆக்ஸிடென்ட்*",
   "தலையில் அடி*",
+  "தலையில அடி*",
   "தலை*+அடிபட்*",
   "உயரத்தில் இருந்து விழு*",
+  "உயரத்தில இருந்து விழு*",
   "மாடியில் இருந்து விழு*",
+  "மாடியில இருந்து விழு*",
   "மரத்தில் இருந்து விழு*",
+  "மரத்தில இருந்து விழு*",
   "கத்தி குத்*",
   "கத்தியால் குத்*",
+  "கத்தியால குத்*",
   "வண்டி மோதி*",
+  "லாரி மோதி*",
+  "பஸ் மோதி*",
   "vibathu",
   "accident aagi*"
  ],
@@ -138,9 +164,15 @@ const TAMIL_KEYWORDS = {
   "வயிற்று*+கடுமைய*",
   "வயிற்று*+தாங்க முடிய*",
   "வயித்து*+பயங்கர*",
+  "ரொம்ப வயிறு வலி*",
+  "வயிறு ரொம்ப வலி*",
+  "ரொம்ப வயித்து வலி*",
+  "வயித்து வலி ரொம்ப*",
   "அப்பெண்டிக்ஸ்*",
   "குடல்வால்*",
-  "vayiru+thanga mudiyala"
+  "vayiru+thanga mudiyala",
+  "romba vayiru vali*",
+  "vayiru romba vali*"
  ],
  "Fracture": [
   "எலும்பு முறி*",
@@ -161,7 +193,11 @@ const TAMIL_KEYWORDS = {
   "காய்ச்சல்*+உதற*",
   "ரொம்ப காய்ச்சல்*",
   "high fever",
-  "romba kaichal*"
+  "romba kaichal*",
+  "காய்ச்சல்*+குறையவே இல்*",
+  "காய்ச்சல்*+குறையல*",
+  "kaichal*+kuraiyave ill*",
+  "kaichal*+kuraiyala*"
  ],
  "Severe migraine/headache": [
   "ஒற்றைத் தலைவலி*",
@@ -174,13 +210,21 @@ const TAMIL_KEYWORDS = {
   "romba thalai vali*"
  ],
  "Persistent vomiting": [
-  "வாந்தி*+நிற்க*",
+  "வாந்தி*+நிற்கவே இல்*",
+  "வாந்தி*+நிக்கவே இல்*",
+  "வாந்தி*+நிக்கல*",
+  "வாந்தி*+நிற்கல*",
+  "நிக்காம வாந்தி*",
+  "நிற்காமல் வாந்தி*",
   "திரும்பத் திரும்ப வாந்தி*",
   "தொடர்ந்து வாந்தி*",
   "நிறைய தடவை வாந்தி*",
   "வாந்தி*+பேதி*",
   "vaanthi+nikkala",
-  "vaanthi+bedhi"
+  "nikkama vaanthi*",
+  "vaanthi+bedhi",
+  "vaanthi*+nikkave ill*",
+  "vaanthi*+nikkala*"
  ],
  "Asthma attack (mild)": [
   "ஆஸ்துமா*",

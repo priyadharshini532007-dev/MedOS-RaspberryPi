@@ -60,8 +60,9 @@ def test_existing_protocol_gets_tamil_words(fresh_db):
     assert kws.startswith("ear pain, earache") and "காது வலி*" in kws
 
 
-def test_ml_model_steps_aside_for_tamil():
-    # The ML model only knows English words; for Tamil it gives no opinion and the rules decide.
+def test_ml_model_reads_tamil_and_gives_no_opinion_on_nonsense():
+    # The model is trained on English, Tamil and Tanglish. Words it has never seen give no opinion at all.
     from medos import ml_triage
-    assert ml_triage.predict("எனக்கு நெஞ்சு வலிக்குது", 58) is None
-    assert ml_triage.predict("chest pain and sweating", 58) is not None
+    p = ml_triage.predict("எனக்கு நெஞ்சு வலிக்குது", 58)
+    assert p and p["condition"] == "Chest pain / suspected heart attack"
+    assert ml_triage.predict("qwxzv", 58) is None

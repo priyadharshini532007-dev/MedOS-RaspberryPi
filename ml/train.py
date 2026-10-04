@@ -1,28 +1,30 @@
-"""Train MedOS's machine-learning priority model and export it for the Pi and the website.
+"""Train MedOS's machine-learning triage model and export it for the Pi and the website.
 
-Model
-    Text:    TF-IDF of the symptom description (words and word pairs, so "no chest" differs from "chest").
-    Numbers: age, temperature, pulse, SpO2, systolic BP, pain score, pregnancy, plus "was this measured"
-             flags, standardised.
-    Classifier: multinomial logistic regression → probability for Critical / High / Medium / Low.
+    python ml/generate_dataset.py      # → ml/data/triage_synthetic.csv (English, Tamil, Tanglish)
+    python ml/train.py                 # → model files + ml/reports/
 
-Logistic regression is deliberate: it is small, fast on a Raspberry Pi, and every prediction can be
-explained (each word and vital sign has a weight per level). The exported model is plain numbers, so the
-Pi (medos/ml_triage.py) and the browser (website/js/ml.js) run it without scikit-learn.
+Model (see medos/ml_triage.py for the exact features)
+    Text:     TF-IDF of words, word pairs and 3–5 character pieces, so Tamil word endings and misspellings match.
+    Numbers:  age, temperature, pulse, SpO2, systolic BP, pain score, pregnancy (+ "was it measured" flags).
+    Heads:    priority  (Critical/High/Medium/Low)  — words + numbers, multinomial logistic regression
+              condition (26 protocol conditions)    — words only,     multinomial logistic regression
+    Export:   weights as 8-bit integers with one scale per class. Every number reported below is measured on
+              these exported weights — the model that actually runs — not on the full-precision one.
 
 Evaluation
-    Stratified 80/20 split of the synthetic dataset. The rules engine (medos/triage.py) is scored on the
-    same test rows, overall and on everyday paraphrases it has no keywords for, so the report shows
-    exactly what the model adds.
+    1. Held-out 15% of the synthetic data, overall and per language, against the rules engine on the same rows.
+    2. Phrasings never seen in training: one base phrase per condition and language is removed from training
+       entirely (every variant of it), and a separate model is scored only on rows that use those phrases.
+    3. ml/data/realworld_eval.csv: sentences written separately from the generator, in English, Tamil and
+       Tanglish, labelled with the protocol's condition and priority. The most honest of the three.
 
-Run:  python ml/train.py
-Writes:
-    medos/models/triage_model.json      model for the Flask app
-    website/ml/triage_model.js          same model for the website
-    ml/reports/metrics.json, metrics.md evaluation report
+Writes medos/models/triage_model.json, website/ml/triage_model.js, ml/reports/{metrics.json, metrics.md,
+reference_predictions.json}.
 """
 from __future__ import annotations
 
+import argparse
+import base64
 import json
 import sys
 import time
@@ -33,242 +35,405 @@ import pandas as pd
 from scipy.sparse import csr_matrix, hstack
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, f1_score
 from sklearn.model_selection import train_test_split
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "ml"))
 
 from medos import triage  # noqa: E402
+from medos.ml_triage import numeric_raw, tokens  # noqa: E402
+from generate_dataset import PARAPHRASES, TA, TL  # noqa: E402   (TA / TL include the extra phrasings)
 
 DATA = ROOT / "ml" / "data" / "triage_synthetic.csv"
+REAL = ROOT / "ml" / "data" / "realworld_eval.csv"          # development set: used while tuning
+REAL_TEST = ROOT / "ml" / "data" / "realworld_test.csv"     # fresh sentences, written before the new phrases were added
 OUT_PY = ROOT / "medos" / "models" / "triage_model.json"
 OUT_JS = ROOT / "website" / "ml" / "triage_model.js"
 REPORTS = ROOT / "ml" / "reports"
-LEVELS = list(triage.LEVELS)            # critical, high, medium, low
-NUMERIC = ["age", "temp", "pulse", "spo2", "bp_sys", "pain"]
+LEVELS = list(triage.LEVELS)
+VITALS = ("temp", "pulse", "spo2", "bp_sys", "pain")
 SEED = 7
+UPGRADE_THRESHOLD = 0.75
+CONDITION_THRESHOLD = 0.55
+# Safety first: how sure the condition head must be before MedOS acts on it, by how serious that condition is.
+# A false alarm costs a little queue priority; a missed emergency can cost a life. Chosen on the held-out-phrase
+# test (see the sweep in the report), not on the fresh sentences.
+THRESH_BY_LEVEL = {"critical": 0.30, "high": 0.40, "medium": 0.55, "low": 0.55}
+CONDITION_SUPPORT = 0.25     # the condition head must at least lean the same way before the priority head can act alone
+COND_INFO = {c["name"]: c for c in triage.DEFAULT_CONDITIONS}
+COND_INFO["Unclassified complaint"] = {"department": "General Medicine", "level": "low"}
 
 
-def numeric_features(df: pd.DataFrame) -> np.ndarray:
-    """Raw numeric block: each vital (missing → 0) + a 'measured' flag, pregnancy, age bands."""
-    cols = []
-    for c in NUMERIC:
-        v = pd.to_numeric(df[c], errors="coerce")
-        cols.append(v.fillna(0).to_numpy(float))
-        cols.append(v.notna().to_numpy(float))
-    age = pd.to_numeric(df["age"], errors="coerce")
-    cols.append(df["pregnant"].astype(float).to_numpy())
-    cols.append(((age >= 65) | (age <= 5)).fillna(False).to_numpy(float))
-    return np.vstack(cols).T
+# ---------------------------------------------------------------- data → features
+def vitals_of(row) -> dict:
+    return {k: row[k] for k in VITALS if k in row and pd.notna(row[k]) and row[k] != ""}
 
 
-NUMERIC_NAMES = [n for c in NUMERIC for n in (c, c + "_measured")] + ["pregnant", "age_extreme"]
+def present(v):
+    """None for missing values (NaN / empty), so a missing age stays missing and bool(NaN) can't mean "pregnant"."""
+    return None if v is None or (isinstance(v, float) and np.isnan(v)) or v == "" else v
 
 
-def rules_level(row) -> str:
-    vitals = {k: row[k] for k in ("temp", "pulse", "spo2", "bp_sys", "pain") if pd.notna(row[k]) and row[k] != ""}
-    return triage.analyse(row["symptoms"], row["age"], row["sex"], vitals, bool(row["pregnant"]))["level"]
+def row_age(row):
+    return present(row.get("age"))
 
 
-def main() -> None:
-    df = pd.read_csv(DATA)
-    train, test = train_test_split(df, test_size=0.2, random_state=SEED, stratify=df["priority"])
+def row_pregnant(row) -> bool:
+    return bool(present(row.get("pregnant")) or 0)
 
-    tfidf = TfidfVectorizer(lowercase=True, ngram_range=(1, 2), min_df=2, sublinear_tf=True)
-    Xt_train = tfidf.fit_transform(train["symptoms"])
-    Xt_test = tfidf.transform(test["symptoms"])
-    N_train, N_test = numeric_features(train), numeric_features(test)
-    mean, scale = N_train.mean(axis=0), N_train.std(axis=0)
+
+def numeric(df: pd.DataFrame) -> np.ndarray:
+    return np.array([numeric_raw(row_age(r), vitals_of(r), row_pregnant(r)) for _, r in df.iterrows()], float)
+
+
+class Model:
+    """Vectoriser + both heads, quantised exactly as exported."""
+
+    def __init__(self, max_features: int, c_priority: float, c_condition: float):
+        self.vec = TfidfVectorizer(analyzer=tokens, min_df=2, sublinear_tf=True, max_features=max_features)
+        self.cp, self.cc = c_priority, c_condition
+
+    def fit(self, df: pd.DataFrame) -> "Model":
+        Xt = self.vec.fit_transform(df["symptoms"])
+        N = numeric(df)
+        self.mean, self.scale = N.mean(axis=0), N.std(axis=0)
+        self.scale[self.scale == 0] = 1.0
+        Xp = hstack([Xt, csr_matrix((N - self.mean) / self.scale)]).tocsr()
+        self.prio = LogisticRegression(C=self.cp, max_iter=4000, class_weight="balanced").fit(Xp, df["priority"])
+        self.cond = LogisticRegression(C=self.cc, max_iter=4000, class_weight="balanced").fit(Xt, df["condition"])
+        self.qp = quantise(self.prio.coef_)
+        self.qc = quantise(self.cond.coef_)
+        return self
+
+    def features(self, texts, df_numeric: pd.DataFrame):
+        Xt = self.vec.transform(texts)
+        N = numeric(df_numeric)
+        return Xt, hstack([Xt, csr_matrix((N - self.mean) / self.scale)]).tocsr()
+
+    def proba(self, texts, df_numeric: pd.DataFrame):
+        """Probabilities from the exported (8-bit) weights — what the Pi and the website compute."""
+        Xt, Xp = self.features(texts, df_numeric)
+        return softmax(Xp @ dequant(self.qp).T + self.prio.intercept_), softmax(Xt @ dequant(self.qc).T + self.cond.intercept_), Xt
+
+
+def quantise(W: np.ndarray):
+    scale = np.abs(W).max(axis=1) / 127.0
     scale[scale == 0] = 1.0
-    X_train = hstack([Xt_train, csr_matrix((N_train - mean) / scale)]).tocsr()
-    X_test = hstack([Xt_test, csr_matrix((N_test - mean) / scale)]).tocsr()
+    Q = np.clip(np.round(W / scale[:, None]), -127, 127).astype(np.int8)
+    return Q, scale
+
+
+def dequant(q) -> np.ndarray:
+    Q, scale = q
+    return Q.astype(np.float64) * scale[:, None]
+
+
+def softmax(Z) -> np.ndarray:
+    Z = np.asarray(Z)
+    Z = Z - Z.max(axis=1, keepdims=True)
+    E = np.exp(Z)
+    return E / E.sum(axis=1, keepdims=True)
+
+
+# ---------------------------------------------------------------- scoring
+def rules_level(row) -> str:
+    return triage.analyse(row["symptoms"] if "symptoms" in row else row["text"], row_age(row), present(row.get("sex")),
+                          vitals_of(row), row_pregnant(row))["level"]
+
+
+def model_target(prio_p, cond_p, prio_classes, cond_classes, thr=None):
+    """The level the model argues for (medos/ml_triage.py target_level() does the same).
+    1. It is confident which condition this is → that condition's protocol level
+       (Stroke signs → critical, Routine check-up → low).
+    2. Otherwise the priority head may act alone only if it is confident AND the condition head leans the same
+       way. On wording it has never seen, the priority head can be confidently wrong; requiring the two heads
+       to agree stops that (e.g. a sugar test and a medicine refill read as a poisoning)."""
+    thr = thr or THRESH_BY_LEVEL
+    c = cond_classes[int(np.argmax(cond_p))]
+    if cond_p.max() >= thr[COND_INFO[c]["level"]]:
+        return COND_INFO[c]["level"]
+    if cond_p.max() >= CONDITION_SUPPORT and prio_p.max() >= UPGRADE_THRESHOLD:
+        level = prio_classes[int(np.argmax(prio_p))]
+        if level == COND_INFO[c]["level"]:
+            return level
+    return None
+
+
+def combine(rules, prio_proba, cond_proba, prio_classes, cond_classes, thr=None, texts=None):
+    """What MedOS does: the rules decide; the model may only raise the level, never lower it, and never on a
+    symptom the text denies ("no chest pain")."""
+    out = []
+    for i, (r, p, c) in enumerate(zip(rules, prio_proba, cond_proba)):
+        t = model_target(p, c, prio_classes, cond_classes, thr)
+        if t and LEVELS.index(t) < LEVELS.index(r) and not (
+                texts is not None and triage.condition_denied(texts[i], cond_classes[int(np.argmax(c))])):
+            out.append(t)
+        else:
+            out.append(r)
+    return np.array(out)
+
+
+def scores(y, p):
+    y, p = np.asarray(y), np.asarray(p)
+    crit = y == "critical"
+    return {"accuracy": round(float((y == p).mean()), 4),
+            "critical_recall": round(float((p[crit] == "critical").mean()), 4) if crit.any() else None,
+            "under_triage": round(float(np.mean([LEVELS.index(a) > LEVELS.index(b) for a, b in zip(p, y)])), 4),
+            "false_critical": round(float(((p == "critical") & ~crit).mean()), 4)}
+
+
+def evaluate(model: Model, df: pd.DataFrame, text_col: str = "symptoms") -> dict:
+    pp, pc, _ = model.proba(df[text_col], df)
+    pclasses, cclasses = list(model.prio.classes_), list(model.cond.classes_)
+    ml = np.array([pclasses[i] for i in pp.argmax(axis=1)])
+    rules = np.array([rules_level(r) for _, r in df.rename(columns={text_col: "symptoms"}).iterrows()])
+    texts = df[text_col].tolist()
+    comb = combine(rules, pp, pc, pclasses, cclasses, texts=texts)
+    cond = np.array([cclasses[i] for i in pc.argmax(axis=1)])
+    conf = pc.max(axis=1)
+    dept = np.array([COND_INFO[c]["department"] for c in cond])
+    true_dept = np.array([COND_INFO[c]["department"] for c in df["condition"]])
+    sure = (conf >= CONDITION_THRESHOLD) & (cond != "Unclassified complaint")
+    return {"rows": int(len(df)), "_texts": texts, "_pp": pp, "_pc": pc, "_rules": rules, "_pclasses": pclasses, "_cclasses": cclasses,
+            "priority": {"rules_engine": scores(df["priority"], rules), "ml_model": scores(df["priority"], ml),
+                         "rules_plus_ml_upgrade": scores(df["priority"], comb)},
+            "condition_accuracy": round(float((cond == df["condition"].to_numpy()).mean()), 4),
+            "department_accuracy": round(float((dept == true_dept).mean()), 4),
+            "confident_condition": {"share": round(float(sure.mean()), 4),
+                                    "accuracy": round(float((cond[sure] == df["condition"].to_numpy()[sure]).mean()), 4) if sure.any() else None},
+            "_pred": {"ml": ml, "rules": rules, "comb": comb, "cond": cond}}
+
+
+def by_language(model: Model, df: pd.DataFrame, text_col: str = "symptoms") -> dict:
+    return {lg: strip(evaluate(model, df[df["lang"] == lg], text_col)) for lg in ("en", "ta", "tl", "mx") if (df["lang"] == lg).any()}
+
+
+def strip(d: dict) -> dict:
+    return {k: v for k, v in d.items() if not k.startswith("_")}
+
+
+# ---------------------------------------------------------------- main
+def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--max-features", type=int, default=16000)
+    ap.add_argument("--c-priority", type=float, default=4.0)
+    ap.add_argument("--c-condition", type=float, default=8.0)
+    ap.add_argument("--no-export", action="store_true", help="evaluate only")
+    args = ap.parse_args()
+
+    df = pd.read_csv(DATA, keep_default_na=False, na_values=[""])
+    real = pd.read_csv(REAL, keep_default_na=False)
+    real_test = pd.read_csv(REAL_TEST, keep_default_na=False)
+    train, test = train_test_split(df, test_size=0.15, random_state=SEED, stratify=df["priority"])
 
     t0 = time.time()
-    clf = LogisticRegression(C=4.0, max_iter=3000, class_weight="balanced")
-    clf.fit(X_train, train["priority"])
+    model = Model(args.max_features, args.c_priority, args.c_condition).fit(train)
     train_s = time.time() - t0
 
-    pred = clf.predict(X_test)
-    y = test["priority"].to_numpy()
-    rules = test.apply(rules_level, axis=1).to_numpy()
-    para = (test["phrasing"] == "paraphrase").to_numpy()
-
-    def scores(p, mask=None):
-        yy, pp = (y, p) if mask is None else (y[mask], p[mask])
-        crit = yy == "critical"
-        return {"accuracy": round(float(accuracy_score(yy, pp)), 4),
-                "macro_f1": round(float(f1_score(yy, pp, average="macro")), 4),
-                "critical_recall": round(float((pp[crit] == "critical").mean()), 4) if crit.any() else None,
-                "under_triage_rate": round(float(np.mean([LEVELS.index(a) > LEVELS.index(b) for a, b in zip(pp, yy)])), 4)}
-
-    # The way MedOS combines them: rules first, the model may only RAISE the level when confident.
-    proba = clf.predict_proba(X_test)
-    classes = list(clf.classes_)
-    combined = []
-    for r, pr in zip(rules, proba):
-        m = classes[int(np.argmax(pr))]
-        combined.append(m if LEVELS.index(m) < LEVELS.index(r) and pr.max() >= 0.75 else r)
-    combined = np.array(combined)
-
+    test_ev = evaluate(model, test)
+    real_ev = evaluate(model, real, text_col="text")
+    test_ev2 = evaluate(model, real_test, text_col="text")
     metrics = {
-        "dataset": {"file": str(DATA.relative_to(ROOT)).replace("\\", "/"), "rows": int(len(df)), "train": int(len(train)), "test": int(len(test)),
-                    "synthetic": True, "class_counts": {k: int(v) for k, v in df["priority"].value_counts().items()}},
-        "model": {"type": "TF-IDF (1-2 grams) + standardised vitals → multinomial logistic regression",
-                  "vocabulary": len(tfidf.vocabulary_), "features": int(X_train.shape[1]), "train_seconds": round(train_s, 2)},
-        "test": {"ml_model": scores(pred), "rules_engine": scores(rules), "rules_plus_ml_upgrade": scores(combined)},
-        "test_paraphrases_only": {"rows": int(para.sum()), "ml_model": scores(pred, para), "rules_engine": scores(rules, para),
-                                  "rules_plus_ml_upgrade": scores(combined, para)},
-        "confusion_matrix": {"labels": LEVELS, "ml_model": confusion_matrix(y, pred, labels=LEVELS).tolist(),
-                             "rules_plus_ml_upgrade": confusion_matrix(y, combined, labels=LEVELS).tolist()},
-        "per_class": classification_report(y, pred, labels=LEVELS, output_dict=True, zero_division=0),
+        "dataset": {"file": "ml/data/triage_synthetic.csv", "rows": int(len(df)), "train": int(len(train)), "test": int(len(test)),
+                    "synthetic": True, "languages": {k: int(v) for k, v in df["lang"].value_counts().items()},
+                    "class_counts": {k: int(v) for k, v in df["priority"].value_counts().items()},
+                    "conditions": int(df["condition"].nunique())},
+        "model": {"features": "words + word pairs + 3-5 character pieces (TF-IDF) + vitals",
+                  "text_features": len(model.vec.vocabulary_), "priority_head": "multinomial logistic regression, 4 levels",
+                  "condition_head": "multinomial logistic regression, %d conditions" % len(model.cond.classes_),
+                  "weights": "8-bit integers, one scale per class", "train_seconds": round(train_s, 1),
+                  "max_features": args.max_features, "C_priority": args.c_priority, "C_condition": args.c_condition},
+        "test": strip(test_ev), "test_by_language": by_language(model, test),
+        "unseen_phrasings": unseen_phrasing_check(df, args),
+        "realworld_dev": strip(real_ev), "realworld_dev_by_language": by_language(model, real, "text"),
+        "realworld_dev_mistakes": mistakes(real, real_ev),
+        "realworld": strip(test_ev2), "realworld_by_language": by_language(model, real_test, "text"),
+        "realworld_mistakes": mistakes(real_test, test_ev2),
+        "thresholds": {"upgrade": UPGRADE_THRESHOLD, "condition": CONDITION_THRESHOLD, "condition_by_level": THRESH_BY_LEVEL, "support": CONDITION_SUPPORT},
         "trained_at": time.strftime("%Y-%m-%d %H:%M"),
     }
+    print_summary(metrics)
+    if args.no_export:
+        return
 
-    # ---- stricter check: phrasings the model has NEVER seen. One paraphrase per condition is removed from
-    # training entirely; a separate model is trained without it and scored only on rows that use it.
-    metrics["unseen_phrasings"] = unseen_phrasing_check(df, tfidf.get_params())
+    export(model, metrics)
+    reference(model, test, pd.concat([real, real_test]).reset_index(drop=True))
+    REPORTS.mkdir(parents=True, exist_ok=True)
+    (REPORTS / "metrics.json").write_text(json.dumps(metrics, indent=2, ensure_ascii=False), encoding="utf-8")
+    (REPORTS / "metrics.md").write_text(report_md(metrics), encoding="utf-8")
+    print("Model written to %s (%d KB) and %s (%d KB)" % (OUT_PY.relative_to(ROOT), OUT_PY.stat().st_size // 1024,
+                                                         OUT_JS.relative_to(ROOT), OUT_JS.stat().st_size // 1024))
 
-    # ---- export: plain numbers, reproduced exactly by medos/ml_triage.py and website/js/ml.js
-    vocab = {term: int(i) for term, i in tfidf.vocabulary_.items()}
-    model = {
-        "name": "MedOS priority model", "version": 1, "classes": classes,
-        "tfidf": {"vocabulary": vocab, "idf": [round(float(x), 6) for x in tfidf.idf_], "ngram_range": [1, 2],
-                  "token_pattern": r"(?u)\b\w\w+\b", "sublinear_tf": True, "norm": "l2"},
-        "numeric": {"names": NUMERIC_NAMES, "mean": [round(float(x), 6) for x in mean], "scale": [round(float(x), 6) for x in scale]},
-        "coef": [[round(float(x), 6) for x in row] for row in clf.coef_],
-        "intercept": [round(float(x), 6) for x in clf.intercept_],
-        "upgrade_threshold": 0.75,
-        "metrics": {"accuracy": metrics["test"]["ml_model"]["accuracy"], "macro_f1": metrics["test"]["ml_model"]["macro_f1"],
-                    "critical_recall": metrics["test"]["ml_model"]["critical_recall"],
-                    "rules_accuracy": metrics["test"]["rules_engine"]["accuracy"],
-                    "combined_accuracy": metrics["test"]["rules_plus_ml_upgrade"]["accuracy"],
-                    "paraphrase_ml_accuracy": metrics["test_paraphrases_only"]["ml_model"]["accuracy"],
-                    "paraphrase_rules_accuracy": metrics["test_paraphrases_only"]["rules_engine"]["accuracy"],
-                    "unseen_phrasing_ml_accuracy": metrics["unseen_phrasings"]["ml_model"],
-                    "unseen_phrasing_rules_accuracy": metrics["unseen_phrasings"]["rules_engine"],
-                    "unseen_phrasing_combined_accuracy": metrics["unseen_phrasings"]["rules_plus_ml_upgrade"],
-                    "test_rows": metrics["dataset"]["test"], "train_rows": metrics["dataset"]["train"], "synthetic_data": True},
+
+def mistakes(real: pd.DataFrame, ev: dict) -> list:
+    out = []
+    for i, (_, r) in enumerate(real.iterrows()):
+        c, comb = ev["_pred"]["cond"][i], ev["_pred"]["comb"][i]
+        if c != r["condition"] or comb != r["priority"]:
+            out.append({"text": r["text"], "lang": r["lang"], "true": [r["condition"], r["priority"]],
+                        "predicted_condition": c, "medos_priority": comb, "rules": ev["_pred"]["rules"][i]})
+    return out
+
+
+def unseen_phrasing_check(df: pd.DataFrame, args) -> dict:
+    held = set()
+    for name, ps in PARAPHRASES.items():
+        held.add(ps[-1])
+    for name, ps in TA.items():
+        held.add(ps[-1][0])
+    for name, ps in TL.items():
+        held.add(ps[-1])
+    is_held = df["base"].isin(held).to_numpy()
+    model = Model(args.max_features, args.c_priority, args.c_condition).fit(df[~is_held])
+    ev = evaluate(model, df[is_held])
+    out = strip(ev)
+    out["held_out_phrases"] = len(held)
+    y = df[is_held]["priority"]
+    sweep = []
+    for name, thr in (("flat 55%", {"critical": .55, "high": .55, "medium": .55, "low": .55}),
+                      ("critical 40% / high 45%", {"critical": .40, "high": .45, "medium": .55, "low": .55}),
+                      ("critical 30% / high 40%", {"critical": .30, "high": .40, "medium": .55, "low": .55}),
+                      ("critical 25% / high 35%", {"critical": .25, "high": .35, "medium": .55, "low": .55}),
+                      ("critical 20% / high 30%", {"critical": .20, "high": .30, "medium": .55, "low": .55})):
+        comb = combine(ev["_rules"], ev["_pp"], ev["_pc"], ev["_pclasses"], ev["_cclasses"], thr, ev["_texts"])
+        sc = scores(y, comb)
+        sweep.append({"policy": name, **sc})
+    out["threshold_sweep"] = sweep
+    out["by_language"] = by_language(model, df[is_held])
+    return out
+
+
+def export(model: Model, metrics: dict) -> None:
+    vocab = {t: int(i) for t, i in model.vec.vocabulary_.items()}
+    def head(est, q, extra=None):
+        Q, scale = q
+        d = {"classes": [str(c) for c in est.classes_], "intercept": [round(float(x), 6) for x in est.intercept_],
+             "scale": [float(s) for s in scale], "w": base64.b64encode(Q.tobytes()).decode("ascii")}
+        d.update(extra or {})
+        return d
+    conds = [str(c) for c in model.cond.classes_]
+    m = {
+        "name": "MedOS triage model", "version": 2,
+        "vocab": vocab, "idf": [round(float(x), 5) for x in model.vec.idf_],
+        "numeric": {"names": [n for k in ("age",) + VITALS for n in (k, k + "_measured")] + ["pregnant", "age_extreme"],
+                    "mean": [round(float(x), 6) for x in model.mean], "scale": [round(float(x), 6) for x in model.scale]},
+        "priority": head(model.prio, model.qp),
+        "condition": head(model.cond, model.qc, {"department": {c: COND_INFO[c]["department"] for c in conds},
+                                                  "level": {c: COND_INFO[c]["level"] for c in conds}}),
+        "upgrade_threshold": UPGRADE_THRESHOLD, "condition_threshold": CONDITION_THRESHOLD, "condition_support": CONDITION_SUPPORT,
+        "condition_threshold_by_level": THRESH_BY_LEVEL,
+        "metrics": {
+            "accuracy": metrics["test"]["priority"]["ml_model"]["accuracy"],
+            "critical_recall": metrics["test"]["priority"]["ml_model"]["critical_recall"],
+            "rules_accuracy": metrics["test"]["priority"]["rules_engine"]["accuracy"],
+            "combined_accuracy": metrics["test"]["priority"]["rules_plus_ml_upgrade"]["accuracy"],
+            "condition_accuracy": metrics["test"]["condition_accuracy"],
+            "unseen_phrasing_rules_accuracy": metrics["unseen_phrasings"]["priority"]["rules_engine"]["accuracy"],
+            "unseen_phrasing_combined_accuracy": metrics["unseen_phrasings"]["priority"]["rules_plus_ml_upgrade"]["accuracy"],
+            "combined_critical_recall": metrics["test"]["priority"]["rules_plus_ml_upgrade"]["critical_recall"],
+            "realworld_rules_accuracy": metrics["realworld"]["priority"]["rules_engine"]["accuracy"],
+            "realworld_combined_accuracy": metrics["realworld"]["priority"]["rules_plus_ml_upgrade"]["accuracy"],
+            "realworld_critical_recall": metrics["realworld"]["priority"]["rules_plus_ml_upgrade"]["critical_recall"],
+            "realworld_condition_accuracy": metrics["realworld"]["condition_accuracy"],
+            "realworld_department_accuracy": metrics["realworld"]["department_accuracy"],
+            "realworld_rows": metrics["realworld"]["rows"],
+            "realworld_dev_combined_accuracy": metrics["realworld_dev"]["priority"]["rules_plus_ml_upgrade"]["accuracy"],
+            "languages": ["English", "Tamil", "Tanglish"],
+            "test_rows": metrics["dataset"]["test"], "train_rows": metrics["dataset"]["train"], "synthetic_data": True,
+        },
     }
     OUT_PY.parent.mkdir(parents=True, exist_ok=True)
-    OUT_PY.write_text(json.dumps(model, separators=(",", ":")), encoding="utf-8")
+    OUT_PY.write_text(json.dumps(m, separators=(",", ":"), ensure_ascii=False), encoding="utf-8")
     OUT_JS.parent.mkdir(parents=True, exist_ok=True)
-    OUT_JS.write_text("// Generated by ml/train.py — do not edit. MedOS priority model (trained on synthetic data).\n"
-                      "window.MEDOS_ML_MODEL = " + json.dumps(model, separators=(",", ":")) + ";\n", encoding="utf-8")
+    OUT_JS.write_text("// Generated by ml/train.py — do not edit. MedOS triage model (trained on synthetic data).\n"
+                      "window.MEDOS_ML_MODEL = " + json.dumps(m, separators=(",", ":"), ensure_ascii=False) + ";\n", encoding="utf-8")
 
-    # Reference predictions so the Python and JavaScript re-implementations can be checked against sklearn.
-    sample = test.head(200)
-    Xs = hstack([tfidf.transform(sample["symptoms"]), csr_matrix((numeric_features(sample) - mean) / scale)]).tocsr()
-    ref = [{"symptoms": r["symptoms"], "age": None if pd.isna(r["age"]) else int(r["age"]), "pregnant": int(r["pregnant"]),
-            "vitals": {k: float(r[k]) for k in ("temp", "pulse", "spo2", "bp_sys", "pain") if pd.notna(r[k])},
-            "proba": [round(float(x), 6) for x in p]} for (_, r), p in zip(sample.iterrows(), clf.predict_proba(Xs))]
+
+def reference(model: Model, test: pd.DataFrame, real: pd.DataFrame) -> None:   # real = dev + fresh sentences
+    """Exported-model predictions on test rows and every real-world sentence, so the Python and JavaScript
+    re-implementations can be checked against them."""
+    sample = pd.concat([test.head(240).rename(columns={"symptoms": "text"}), real]).reset_index(drop=True)
+    pp, pc, _ = model.proba(sample["text"], sample)
+    rows = []
+    for (_, r), a, b in zip(sample.iterrows(), pp, pc):
+        age = row_age(r)
+        rows.append({"text": r["text"], "age": None if age is None else int(age), "pregnant": int(row_pregnant(r)),
+                     "vitals": {k: float(v) for k, v in vitals_of(r).items()},
+                     "priority": [round(float(x), 6) for x in a], "condition": [round(float(x), 6) for x in b]})
     REPORTS.mkdir(parents=True, exist_ok=True)
-    (REPORTS / "reference_predictions.json").write_text(json.dumps({"classes": classes, "rows": ref}, indent=0), encoding="utf-8")
-    (REPORTS / "metrics.json").write_text(json.dumps(metrics, indent=2), encoding="utf-8")
-    (REPORTS / "metrics.md").write_text(report_md(metrics), encoding="utf-8")
-
-    t = metrics["test"]
-    print("Trained on %d rows, tested on %d (synthetic)." % (len(train), len(test)))
-    for k in ("ml_model", "rules_engine", "rules_plus_ml_upgrade"):
-        print("  %-22s accuracy %.3f  macro-F1 %.3f  critical recall %.3f" % (k, t[k]["accuracy"], t[k]["macro_f1"], t[k]["critical_recall"]))
-    tp = metrics["test_paraphrases_only"]
-    print("  paraphrases only: ML %.3f vs rules %.3f" % (tp["ml_model"]["accuracy"], tp["rules_engine"]["accuracy"]))
-    u = metrics["unseen_phrasings"]
-    print("  never-seen phrasings (%d rows): ML %.3f, rules %.3f, rules+ML %.3f" % (u["rows"], u["ml_model"], u["rules_engine"], u["rules_plus_ml_upgrade"]))
-    print("Model written to %s and %s" % (OUT_PY.relative_to(ROOT), OUT_JS.relative_to(ROOT)))
+    (REPORTS / "reference_predictions.json").write_text(json.dumps(
+        {"priority_classes": [str(c) for c in model.prio.classes_], "condition_classes": [str(c) for c in model.cond.classes_],
+         "rows": rows}, ensure_ascii=False), encoding="utf-8")
 
 
-def unseen_phrasing_check(df: pd.DataFrame, tfidf_params: dict) -> dict:
-    sys.path.insert(0, str(ROOT / "ml"))
-    from generate_dataset import PARAPHRASES  # noqa: E402
-    held = [ps[-1].lower() for ps in PARAPHRASES.values() if len(ps) > 1]
-    is_held = df["symptoms"].str.lower().apply(lambda s: any(h in s for h in held)).to_numpy()
-    tr, te = df[~is_held], df[is_held]
-    vec = TfidfVectorizer(**tfidf_params)
-    Xt_tr, Xt_te = vec.fit_transform(tr["symptoms"]), vec.transform(te["symptoms"])
-    Ntr, Nte = numeric_features(tr), numeric_features(te)
-    mu, sd = Ntr.mean(axis=0), Ntr.std(axis=0)
-    sd[sd == 0] = 1.0
-    clf = LogisticRegression(C=4.0, max_iter=3000, class_weight="balanced")
-    clf.fit(hstack([Xt_tr, csr_matrix((Ntr - mu) / sd)]).tocsr(), tr["priority"])
-    Xte = hstack([Xt_te, csr_matrix((Nte - mu) / sd)]).tocsr()
-    pred, proba = clf.predict(Xte), clf.predict_proba(Xte)
-    y = te["priority"].to_numpy()
-    rules = te.apply(rules_level, axis=1).to_numpy()
-    classes = list(clf.classes_)
-    comb = np.array([classes[int(np.argmax(p))] if LEVELS.index(classes[int(np.argmax(p))]) < LEVELS.index(r) and p.max() >= 0.75 else r
-                     for r, p in zip(rules, proba)])
-    acc = lambda p: round(float(accuracy_score(y, p)), 4)  # noqa: E731
-    crit = y == "critical"
-    return {"held_out_phrasings": len(held), "rows": int(len(te)), "ml_model": acc(pred), "rules_engine": acc(rules),
-            "rules_plus_ml_upgrade": acc(comb),
-            "critical_recall": {"ml_model": round(float((pred[crit] == "critical").mean()), 4),
-                                "rules_engine": round(float((rules[crit] == "critical").mean()), 4),
-                                "rules_plus_ml_upgrade": round(float((comb[crit] == "critical").mean()), 4)}}
+def print_summary(m: dict) -> None:
+    def line(name, d):
+        p = d["priority"]
+        print("  %-26s rules %.3f | ML %.3f | rules+ML %.3f (critical recall %.3f) | condition %.3f | department %.3f" % (
+            name, p["rules_engine"]["accuracy"], p["ml_model"]["accuracy"], p["rules_plus_ml_upgrade"]["accuracy"],
+            p["rules_plus_ml_upgrade"]["critical_recall"] or 0, d["condition_accuracy"], d["department_accuracy"]))
+    print("Trained on %d synthetic rows (%s); %d text features." % (m["dataset"]["train"], m["dataset"]["languages"], m["model"]["text_features"]))
+    line("test (synthetic)", m["test"])
+    for lg, d in m["test_by_language"].items():
+        line("  test, " + lg, d)
+    line("never-seen phrasings", m["unseen_phrasings"])
+    print("  threshold sweep on never-seen phrasings (MedOS = rules + ML):")
+    for r in m["unseen_phrasings"]["threshold_sweep"]:
+        print("    %-26s accuracy %.3f | critical recall %.3f | under-triage %.3f | false critical %.3f" % (
+            r["policy"], r["accuracy"], r["critical_recall"], r["under_triage"], r["false_critical"]))
+    line("DEV sentences (tuned on)", m["realworld_dev"])
+    line("FRESH held-out sentences", m["realworld"])
+    for lg, d in m["realworld_by_language"].items():
+        line("  fresh, " + lg, d)
+    print("  held-out mistakes: %d of %d (dev set: %d of %d)" % (len(m["realworld_mistakes"]), m["realworld"]["rows"], len(m["realworld_dev_mistakes"]), m["realworld_dev"]["rows"]))
+    for x in m["realworld_mistakes"]:
+        print("    [%s] %s\n         true %s / %s  →  model condition %s, MedOS priority %s (rules %s)" % (
+            x["lang"], x["text"], x["true"][0], x["true"][1], x["predicted_condition"], x["medos_priority"], x["rules"]))
 
 
 def report_md(m: dict) -> str:
-    def row(name, s):
-        return "| %s | %.1f%% | %.3f | %.1f%% | %.1f%% |" % (name, s["accuracy"] * 100, s["macro_f1"], s["critical_recall"] * 100, s["under_triage_rate"] * 100)
-    t, tp = m["test"], m["test_paraphrases_only"]
-    cm = m["confusion_matrix"]["ml_model"]
-    lines = [
-        "# MedOS priority model — evaluation report",
-        "",
-        "> **Synthetic data.** The model is trained and tested on `%s`, generated by `ml/generate_dataset.py` "
-        "from the MedOS triage protocol. It is not real patient data, so these numbers show the method works; "
-        "they are not clinical validation." % m["dataset"]["file"],
-        "",
-        "- Rows: %d (train %d, test %d, stratified split)" % (m["dataset"]["rows"], m["dataset"]["train"], m["dataset"]["test"]),
-        "- Model: %s" % m["model"]["type"],
-        "- Features: %d (%d text terms + vitals); training time %.2f s" % (m["model"]["features"], m["model"]["vocabulary"], m["model"]["train_seconds"]),
-        "- Trained: %s" % m["trained_at"],
-        "",
-        "## Test set (all %d rows)" % m["dataset"]["test"],
-        "",
-        "| Method | Accuracy | Macro F1 | Critical recall | Under-triage |",
-        "|---|---|---|---|---|",
-        row("ML model alone", t["ml_model"]),
-        row("Rules engine alone", t["rules_engine"]),
-        row("**Rules + ML upgrade (used in MedOS)**", t["rules_plus_ml_upgrade"]),
-        "",
-        "## Everyday phrasings the keyword rules don't contain (%d rows)" % tp["rows"],
-        "",
-        "| Method | Accuracy | Macro F1 | Critical recall | Under-triage |",
-        "|---|---|---|---|---|",
-        row("ML model alone", tp["ml_model"]),
-        row("Rules engine alone", tp["rules_engine"]),
-        row("**Rules + ML upgrade (used in MedOS)**", tp["rules_plus_ml_upgrade"]),
-        "",
-        "*Under-triage* = predicted less urgent than the true level (the dangerous error).",
-        "",
-        "## Phrasings the model has never seen (stricter test)",
-        "",
-        "The tables above test on new patients, but those patients reuse phrasings that also appear in training. "
-        "Here one phrasing per condition (%d in total) was removed from training completely, a separate model was "
-        "trained without them, and it was scored only on the %d rows that use them." % (
-            m["unseen_phrasings"]["held_out_phrasings"], m["unseen_phrasings"]["rows"]),
-        "",
-        "| Method | Accuracy | Critical recall |",
-        "|---|---|---|",
-        "| ML model alone | %.1f%% | %.1f%% |" % (m["unseen_phrasings"]["ml_model"] * 100, m["unseen_phrasings"]["critical_recall"]["ml_model"] * 100),
-        "| Rules engine alone | %.1f%% | %.1f%% |" % (m["unseen_phrasings"]["rules_engine"] * 100, m["unseen_phrasings"]["critical_recall"]["rules_engine"] * 100),
-        "| **Rules + ML upgrade** | %.1f%% | %.1f%% |" % (m["unseen_phrasings"]["rules_plus_ml_upgrade"] * 100, m["unseen_phrasings"]["critical_recall"]["rules_plus_ml_upgrade"] * 100),
-        "",
-        "This is the honest measure of how well the model handles wording it was not trained on.",
-        "",
-        "## Confusion matrix — ML model (rows = true, columns = predicted)",
-        "",
-        "| | " + " | ".join(l.capitalize() for l in LEVELS) + " |",
-        "|---|" + "---|" * len(LEVELS),
-    ]
-    for lbl, r in zip(LEVELS, cm):
-        lines.append("| **%s** | " % lbl.capitalize() + " | ".join(str(x) for x in r) + " |")
-    lines += ["", "## How MedOS uses the model", "",
-              "The rules engine sets the priority first. The model gives a second opinion and may only **raise** the level, "
-              "and only when it is at least 75% confident. It can never lower a priority, so a model mistake cannot "
-              "push a sick patient down the queue.", ""]
-    return "\n".join(lines)
+    def table(d, title):
+        p = d["priority"]
+        rows = [title, "", "| Method | Priority accuracy | Critical recall | Under-triage |", "|---|---|---|---|"]
+        for key, label in (("rules_engine", "Rules alone"), ("ml_model", "ML model alone"), ("rules_plus_ml_upgrade", "**Rules + ML upgrade (what MedOS uses)**")):
+            s = p[key]
+            rows.append("| %s | %.1f%% | %s | %.1f%% |" % (label, s["accuracy"] * 100, "%.1f%%" % (s["critical_recall"] * 100) if s["critical_recall"] is not None else "—", s["under_triage"] * 100))
+        rows += ["", "Condition (what the complaint means): **%.1f%%** correct · department for booking: **%.1f%%** · "
+                 "confident predictions (≥ %d%%): %.0f%% of rows, %.1f%% correct." % (
+                     d["condition_accuracy"] * 100, d["department_accuracy"] * 100, CONDITION_THRESHOLD * 100,
+                     d["confident_condition"]["share"] * 100, (d["confident_condition"]["accuracy"] or 0) * 100), ""]
+        return rows
+    lang_name = {"en": "English", "ta": "Tamil", "tl": "Tanglish", "mx": "Tamil + English mixed"}
+    L = ["# MedOS triage model — evaluation report", "",
+         "> **Synthetic training data.** The model is trained on `ml/data/triage_synthetic.csv`, generated by "
+         "`ml/generate_dataset.py` from the MedOS triage protocol in English, Tamil and Tanglish. It is not real patient "
+         "data. The real-world set below was written separately; these numbers show the method works, not clinical validation.", "",
+         "- Rows: %d (%s), train %d, test %d" % (m["dataset"]["rows"], ", ".join("%s %d" % (lang_name[k], v) for k, v in m["dataset"]["languages"].items()),
+                                                 m["dataset"]["train"], m["dataset"]["test"]),
+         "- Model: %s; %d text features; priority head + condition head (%s)" % (m["model"]["features"], m["model"]["text_features"], m["model"]["condition_head"]),
+         "- Weights: %s. Every number here is measured on the exported weights." % m["model"]["weights"],
+         "- Trained: %s" % m["trained_at"], ""]
+    L += table(m["realworld"], "## Fresh held-out sentences (%d, written separately from the generator and before the final round of tuning)" % m["realworld"]["rows"])
+    for lg, d in m["realworld_by_language"].items():
+        L += table(d, "### Fresh sentences — %s (%d)" % (lang_name[lg], d["rows"]))
+    L += table(m["realworld_dev"], "## Development sentences (%d) — the set the model was tuned against, so treat it as optimistic" % m["realworld_dev"]["rows"])
+    L += table(m["unseen_phrasings"], "## Phrasings never seen in training (%d rows, %d held-out phrases)" % (m["unseen_phrasings"]["rows"], m["unseen_phrasings"]["held_out_phrases"]))
+    L += table(m["test"], "## Synthetic test set (%d rows)" % m["test"]["rows"])
+    L += ["## Mistakes on the fresh held-out sentences", ""]
+    if m["realworld_mistakes"]:
+        L += ["| Sentence | True | Model's condition | MedOS priority |", "|---|---|---|---|"]
+        for x in m["realworld_mistakes"]:
+            L.append("| %s | %s · %s | %s | %s |" % (x["text"], x["true"][0], x["true"][1], x["predicted_condition"], x["medos_priority"]))
+    else:
+        L.append("None.")
+    L += ["", "## How MedOS uses the model", "",
+          "- **Priority:** the rules engine decides first. The model may only **raise** the level, and only when at least "
+          "%d%% confident; it never lowers a priority and never overrides staff." % (UPGRADE_THRESHOLD * 100),
+          "- **Condition → department:** when the condition head is at least %d%% confident, booking uses its department to "
+          "find a hospital with the right specialist, and the condition explains a Tamil complaint in English." % (CONDITION_THRESHOLD * 100),
+          "- *Under-triage* = predicted less urgent than the true level (the dangerous error).", ""]
+    return "\n".join(L)
 
 
 if __name__ == "__main__":
